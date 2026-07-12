@@ -832,19 +832,13 @@ function applyCustomAmount() {
 }
 
 async function submitNewDeposit() {
-    const inputEl = document.getElementById('deposit-tx-hash-input');
     const screenshotEl = document.getElementById('deposit-screenshot-input');
     
-    if (!inputEl || inputEl.value.trim() === "") {
-        alert("Please enter your TRON (TRC20) Transaction ID.");
-        return;
-    }
     if (!screenshotEl || !screenshotEl.files || screenshotEl.files.length === 0) {
         alert("Please upload a screenshot of your payment.");
         return;
     }
 
-    const txnId = inputEl.value.trim();
     const file = screenshotEl.files[0];
     
     // Convert file to Base64
@@ -869,13 +863,12 @@ async function submitNewDeposit() {
                 method: 'POST',
                 body: JSON.stringify({
                     amount: currentSelectedDepositAmount,
-                    txnId: txnId,
+                    txnId: "N/A",
                     screenshotBase64: base64Image,
                     planName: planName || null
                 })
             });
             showToast("Deposit submitted! Waiting please for admin approval.");
-            inputEl.value = "";
             screenshotEl.value = "";
             await fetchAllDashboardData();
         } catch (e) {
@@ -895,14 +888,14 @@ const ALL_INVESTMENT_PLANS = [
     { name: 'Avengers: Endgame',    img: 'images/avengers_theme.png',   price: 100, roi: 2.5, duration: '24 Hours', category: 'movies' },
     { name: 'Movie Combo',          img: 'images/movie_combo.png',      price: 100, roi: 2.5, duration: '24 Hours', category: 'products' },
     { name: 'Netflix Gift Card',    img: 'images/netflix_card.png',     price: 100, roi: 2.5, duration: '24 Hours', category: 'giftcards' },
-    { name: 'Spider-Man Ticket',    img: 'images/amc_theater.png',      price: 150, roi: 3.0, duration: '24 Hours', category: 'movies' },
-    { name: 'Black Panther Plan',   img: 'images/avengers_theme.png',   price: 200, roi: 3.0, duration: '24 Hours', category: 'movies' },
-    { name: 'Popcorn Combo Deal',   img: 'images/movie_combo.png',      price: 80,  roi: 2.5, duration: '24 Hours', category: 'products' },
-    { name: 'Amazon Gift Card',     img: 'images/netflix_card.png',     price: 120, roi: 2.5, duration: '24 Hours', category: 'giftcards' },
+    { name: 'Spider-Man Ticket',    img: 'images/amc_theater.png',      price: 100, roi: 2.5, duration: '24 Hours', category: 'movies' },
+    { name: 'Black Panther Plan',   img: 'images/avengers_theme.png',   price: 100, roi: 2.5, duration: '24 Hours', category: 'movies' },
+    { name: 'Popcorn Combo Deal',   img: 'images/movie_combo.png',      price: 100, roi: 2.5, duration: '24 Hours', category: 'products' },
+    { name: 'Amazon Gift Card',     img: 'images/netflix_card.png',     price: 100, roi: 2.5, duration: '24 Hours', category: 'giftcards' },
     { name: 'Guardians Ticket',     img: 'images/amc_theater.png',      price: 100, roi: 2.5, duration: '24 Hours', category: 'movies' },
-    { name: 'IMAX Experience',      img: 'images/avengers_theme.png',   price: 250, roi: 3.5, duration: '24 Hours', category: 'movies' },
-    { name: 'Soda + Snack Pack',    img: 'images/movie_combo.png',      price: 60,  roi: 2.0, duration: '24 Hours', category: 'products' },
-    { name: 'Google Play Card',     img: 'images/netflix_card.png',     price: 90,  roi: 2.5, duration: '24 Hours', category: 'giftcards' },
+    { name: 'IMAX Experience',      img: 'images/avengers_theme.png',   price: 100, roi: 2.5, duration: '24 Hours', category: 'movies' },
+    { name: 'Soda + Snack Pack',    img: 'images/movie_combo.png',      price: 100, roi: 2.5, duration: '24 Hours', category: 'products' },
+    { name: 'Google Play Card',     img: 'images/netflix_card.png',     price: 100, roi: 2.5, duration: '24 Hours', category: 'giftcards' },
 ];
 
 const DB_PLANS_PER_PAGE = 6;
@@ -1108,3 +1101,24 @@ function renderDummyMyInvestments() {
         tryInit();
     }
 })();
+
+async function changeUserPassword() {
+    const pwdInput = document.getElementById('profile-new-password');
+    if (!pwdInput) return;
+    const newPassword = pwdInput.value.trim();
+    if (newPassword.length < 6) {
+        alert("Password must be at least 6 characters long.");
+        return;
+    }
+    
+    try {
+        await apiRequest('/user/password', {
+            method: 'POST',
+            body: JSON.stringify({ newPassword })
+        });
+        showToast("Password updated successfully!");
+        pwdInput.value = '';
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
+}

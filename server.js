@@ -460,6 +460,22 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
 });
 
+// Update User Password API
+app.post('/api/user/password', authenticateToken, async (req, res) => {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+    try {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.userId]);
+        res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        console.error('Password update error:', error);
+        res.status(500).json({ message: 'Server error updating password' });
+    }
+});
+
 // 5. User Profile API
 app.get('/api/user/profile', authenticateToken, async (req, res) => {
     try {
@@ -990,6 +1006,11 @@ setInterval(async () => {
         console.error('Error executing profit compounding background tasks:', err.message);
     }
 }, 15000);
+
+// Root Route: Redirect to Login
+app.get('/', (req, res) => {
+    res.redirect('/login');
+});
 
 // Serve static assets from public folder
 app.use(express.static(path.join(__dirname, 'public')));
