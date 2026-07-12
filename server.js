@@ -1007,9 +1007,9 @@ setInterval(async () => {
     }
 }, 15000);
 
-// Root Route: Redirect to Login
+// Root Route: Serve Login
 app.get('/', (req, res) => {
-    res.redirect('/login');
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // Serve static assets from public folder
