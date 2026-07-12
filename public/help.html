@@ -32,10 +32,29 @@
             </nav>
             
             <div class="header-right">
-                <a href="/login" class="nav-btn-primary" id="landing-profile-btn" style="text-decoration: none;">
-                    <span class="material-symbols-outlined logo-icon-purple">person</span>
-                    <span>Sign In</span>
-                </a>
+                <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle Theme" style="margin-right: 0.25rem;">
+                    <span class="material-symbols-outlined theme-icon">dark_mode</span>
+                </button>
+                <div style="position: relative;">
+                    <a href="/dashboard" class="profile-dropdown-btn" id="landing-profile-btn">
+                        <div class="profile-avatar-u">U</div>
+                        <span>User</span>
+                        <span class="material-symbols-outlined" style="font-size: 1.1rem; color: #64748b;">keyboard_arrow_down</span>
+                    </a>
+                    
+                    <!-- Landing Page Profile Dropdown -->
+                    <div class="profile-dropdown-menu" id="landing-profile-dropdown" style="display: none; position: absolute; top: 115%; right: 0; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; width: 140px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); z-index: 1000; padding: 0.5rem 0;">
+                        <a href="/dashboard" class="dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; color: #334155; font-size: 0.85rem; text-decoration: none; font-weight: 500;">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">dashboard</span>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="/" class="dropdown-item logout-action-btn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; color: #ef4444; font-size: 0.85rem; text-decoration: none; font-weight: 500; border-top: 1px solid #f1f5f9;">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">logout</span>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+                </div>
+
                 <button class="nav-toggle-btn" aria-label="Toggle Navigation">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
@@ -99,6 +118,114 @@
                 navLinks.classList.toggle('active');
             });
         }
+
+        // Theme Toggle Logic
+        const themeBtn = document.getElementById('theme-toggle-btn');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', () => {
+                const body = document.body;
+                body.classList.toggle('dark-theme');
+                const icon = themeBtn.querySelector('.material-symbols-outlined');
+                if (body.classList.contains('dark-theme')) {
+                    icon.textContent = 'light_mode';
+                } else {
+                    icon.textContent = 'dark_mode';
+                }
+            });
+        }
+
+        // User Profile Dropdown logic on landing page
+        const profileBtn = document.getElementById('landing-profile-btn');
+        const profileDropdown = document.getElementById('landing-profile-dropdown');
+        if (profileBtn && profileDropdown) {
+            profileBtn.addEventListener('click', (e) => {
+                const token = localStorage.getItem('nova_token');
+                if (token) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const isOpen = profileDropdown.style.display === 'block';
+                    profileDropdown.style.display = isOpen ? 'none' : 'block';
+                }
+            });
+
+            // Logout action inside landing dropdown
+            const logoutLink = profileDropdown.querySelector('.logout-action-btn');
+            if (logoutLink) {
+                logoutLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    localStorage.removeItem('nova_token');
+                    localStorage.removeItem('nova_role');
+                    window.location.href = '/login';
+                });
+            }
+        }
+
+        // Global click-away handler to close open menus
+        document.addEventListener('click', () => {
+            if (navLinks) navLinks.classList.remove('active');
+            if (profileDropdown) profileDropdown.style.display = 'none';
+        });
+
+        // Dynamic User Profile Update in Header
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('nova_token');
+
+            // Intercept restricted /dashboard links for guests
+            if (!token) {
+                const restrictedLinks = document.querySelectorAll('a[href*="/dashboard"]');
+                restrictedLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        window.location.href = '/login';
+                    });
+                });
+            }
+
+            if (token) {
+                // If logged in, fetch user details to display name in header
+                fetch('/api/user/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(res => {
+                    if (res.status === 401 || res.status === 403) {
+                        localStorage.removeItem('nova_token');
+                        localStorage.removeItem('nova_role');
+                        window.location.reload();
+                        return null;
+                    }
+                    return res.json();
+                })
+                .then(profile => {
+                    if (profile && profile.name) {
+                        const profileBtn = document.getElementById('landing-profile-btn');
+                        if (profileBtn) profileBtn.classList.add('logged-in');
+                        const avatarU = document.querySelector('.profile-avatar-u');
+                        if (avatarU) {
+                            // Initials for avatar
+                            avatarU.textContent = profile.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                        }
+                        const nameSpan = document.querySelector('.profile-dropdown-btn > span:not(.material-symbols-outlined)');
+                        if (nameSpan) {
+                            nameSpan.textContent = profile.name;
+                        }
+                    }
+                })
+                .catch(err => console.error("Error loading user profile:", err));
+            } else {
+                // If not logged in, show Register CTA
+                const profileBtn = document.getElementById('landing-profile-btn');
+                if (profileBtn) {
+                    profileBtn.classList.remove('logged-in');
+                    profileBtn.href = '/login?tab=signup';
+                    const avatarU = document.querySelector('.profile-avatar-u');
+                    if (avatarU) avatarU.style.display = 'none';
+                    const nameSpan = document.querySelector('.profile-dropdown-btn > span:not(.material-symbols-outlined)');
+                    if (nameSpan) nameSpan.textContent = 'Register';
+                    const arrow = profileBtn.querySelector('.material-symbols-outlined:not(.logo-icon-purple)');
+                    if (arrow) arrow.style.display = 'none';
+                }
+            }
+        });
     </script>
 </body>
 </html>
