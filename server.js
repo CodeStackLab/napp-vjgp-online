@@ -1013,7 +1013,7 @@ app.get('/', (req, res) => {
 });
 
 // Serve static assets from public folder
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1d' }));
 
 // Clean HTML URL Routes
 app.get('/login', (req, res) => {

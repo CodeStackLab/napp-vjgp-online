@@ -58,7 +58,6 @@ body {
     background-color: var(--bg-primary);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Utility classes for premium gradient highlights */
@@ -2705,9 +2704,9 @@ body.dark-theme .pagination-btn.num-btn.active {
 .roi-calculator-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 24px;
-    padding: 2.75rem 2.5rem;
-    box-shadow: var(--shadow-lg);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
     color: var(--text-primary);
     max-width: 960px;
     margin: 0 auto;
@@ -2810,8 +2809,8 @@ body.dark-theme .roi-quick-btn {
 .roi-results-box {
     background: #F8FAFC;
     border: 1px solid var(--border-color);
-    border-radius: 18px;
-    padding: 1.75rem;
+    border-radius: 12px;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.1rem;
