@@ -655,6 +655,9 @@
             document.getElementById('signin-password').value = password;
         }
 
+        const globalUrlParams = new URLSearchParams(window.location.search);
+        const redirectTarget = globalUrlParams.get('redirect');
+
         // Check if token exists and redirect immediately
         const token = localStorage.getItem('nova_token');
         if (token) {
@@ -663,7 +666,7 @@
             if (role === 'admin') {
                 window.location.href = '/admin';
             } else {
-                window.location.href = '/dashboard';
+                window.location.href = redirectTarget ? redirectTarget : '/dashboard';
             }
         }
 
@@ -767,7 +770,7 @@
                 if (data.user.role === 'admin') {
                     window.location.href = '/admin';
                 } else {
-                    window.location.href = '/dashboard';
+                    window.location.href = redirectTarget ? redirectTarget : '/dashboard';
                 }
             } catch (err) {
                 alert(err.message);
@@ -802,7 +805,7 @@
                 localStorage.setItem('nova_token', data.token);
                 localStorage.setItem('nova_role', 'user');
 
-                window.location.href = '/dashboard';
+                window.location.href = redirectTarget ? redirectTarget : '/dashboard';
             } catch (err) {
                 alert(err.message);
             }
@@ -894,7 +897,7 @@
 
             const token = localStorage.getItem('nova_token');
             if (token) {
-                window.location.href = '/dashboard';
+                window.location.href = redirectTarget ? redirectTarget : '/dashboard';
                 return;
             }
 

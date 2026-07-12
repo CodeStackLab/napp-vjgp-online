@@ -240,9 +240,26 @@ document.addEventListener("DOMContentLoaded", async () => {
             currentSelectedDepositAmount = amtVal;
             const hint = document.getElementById('deposit-selected-hint');
             if (hint) {
-                hint.innerHTML = `✨ Deposit required for <strong>${planParam || 'Investment Plan'}</strong>: <strong>$${amtVal} USDT</strong>`;
+                hint.innerHTML = `✨ Deposit required for <strong style="color:#a855f7;">${planParam || 'Investment Plan'}</strong>: <strong>$${amtVal} USDT</strong>`;
             }
-            showToast(`Auto-selected Deposit Amount: $${amtVal} USDT`);
+            
+            const customInput = document.getElementById('custom-amount-input');
+            if (customInput) customInput.value = amtVal;
+
+            // Optional: visually highlight the custom card by default to show a custom amount is selected
+            const cards = document.querySelectorAll('.amount-card-opt');
+            cards.forEach(c => {
+                c.classList.remove('active-card');
+                c.style.borderColor = '#1e2538';
+                const btn = c.querySelector('.amount-select-btn');
+                if (btn && btn.textContent !== 'Custom') {
+                    btn.style.backgroundColor = 'rgba(168, 85, 247, 0.1)';
+                    btn.style.color = '#a855f7';
+                    btn.textContent = 'Select';
+                }
+            });
+            const customBtn = document.getElementById('custom-amt-btn');
+            if (customBtn) customBtn.textContent = `$${amtVal}`;
         }
     }
 
@@ -560,9 +577,12 @@ function renderDepositsTable(deposits) {
         const badgeColor = isConfirmed ? '#10b981' : '#f59e0b';
         const badgeBorder = isConfirmed ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)';
         const formattedAmount = typeof dep.amount === 'number' ? `$${dep.amount}` : `$${dep.amount}`;
+        const planStr = dep.plan_name ? `<span style="color:#a855f7; font-weight:600;">${dep.plan_name}</span>` : 'Custom Deposit';
+        
         return `
         <tr style="border-bottom: 1px solid #1e2538;">
             <td style="padding: 1rem 1.25rem; color: #cbd5e1; font-size: 0.85rem;">${dep.date || 'Today'}</td>
+            <td style="padding: 1rem 1.25rem; font-size: 0.85rem;">${planStr}</td>
             <td style="padding: 1rem 1.25rem; font-weight: 700; color: #f8fafc; font-size: 0.85rem;">${formattedAmount}</td>
             <td style="padding: 1rem 1.25rem; color: #cbd5e1; font-size: 0.85rem; font-family: monospace;">${dep.txn_id || 'TXN7f3e8d9c2a1b4f...'}</td>
             <td style="padding: 1rem 1.25rem;">

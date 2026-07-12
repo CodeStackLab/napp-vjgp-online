@@ -401,31 +401,14 @@
             };
             const info = planPrices[plan] || { name: 'Compounding Investment Plan', price: 100 };
             
-            let currentBalance = parseFloat(localStorage.getItem('nova_balance') || '350.00');
-            const choice = confirm(`✨ ${info.name} ($${info.price})\n\nYour Available Wallet Balance: $${currentBalance.toFixed(2)}\n\nClick [OK] to Invest instantly using your Wallet Balance.\nClick [Cancel] to go directly to Deposit $${info.price} USDT for this plan.`);
-            
-            if (choice) {
-                if (currentBalance >= info.price) {
-                    currentBalance -= info.price;
-                    localStorage.setItem('nova_balance', currentBalance.toFixed(2));
-                    let myPlans = JSON.parse(localStorage.getItem('nova_my_plans') || '[]');
-                    myPlans.push({
-                        name: info.name,
-                        principal: info.price,
-                        returnRate: '2.5% Daily',
-                        expectedPayout: (info.price * 1.025).toFixed(2),
-                        status: 'Active',
-                        timeLeft: '23h 59m left'
-                    });
-                    localStorage.setItem('nova_my_plans', JSON.stringify(myPlans));
-                    alert(`🎉 Congratulations! You successfully invested $${info.price} in ${info.name}!\n\nRemaining Wallet Balance: $${currentBalance.toFixed(2)}\nYour 2.5% daily compounding return starts immediately.`);
-                    window.location.href = '/dashboard?tab=myinvestments';
-                } else {
-                    alert(`Insufficient Wallet Balance ($${currentBalance.toFixed(2)}).\n\nTaking you directly to Deposit $${info.price} USDT to activate ${info.name}...`);
-                    window.location.href = `/dashboard?tab=deposit&amount=${info.price}&plan=${encodeURIComponent(info.name)}`;
-                }
+            const token = localStorage.getItem('nova_token');
+            const targetUrl = `/dashboard?tab=deposit&amount=${info.price}&plan=${encodeURIComponent(info.name)}`;
+
+            if (token) {
+                window.location.href = targetUrl;
             } else {
-                window.location.href = `/dashboard?tab=deposit&amount=${info.price}&plan=${encodeURIComponent(info.name)}`;
+                const loginUrl = `/login?tab=signup&redirect=${encodeURIComponent(targetUrl)}`;
+                window.location.href = loginUrl;
             }
         }
 
