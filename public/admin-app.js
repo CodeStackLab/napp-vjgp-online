@@ -114,6 +114,13 @@ function showToast(message) {
     }
 }
 
+// Copy to Clipboard Utility
+function copyToClipboard(text, message = "Copied to clipboard!") {
+    navigator.clipboard.writeText(text)
+        .then(() => showToast(message))
+        .catch(() => showToast("Failed to copy."));
+}
+
 // Initialize Application Routing & Listeners
 document.addEventListener("DOMContentLoaded", async () => {
     // 1. Session Auth Role check
@@ -359,6 +366,12 @@ function renderDepositsTable(deposits) {
                 <td>${dep.date}</td>
                 <td style="font-weight:600; color:#f1f5f9;">${dep.user_name}</td>
                 <td style="font-weight:700; color:#3b82f6;">$${dep.amount.toFixed(2)}</td>
+                <td style="font-family: monospace; white-space: nowrap;">
+                    <span>${dep.txn_id || 'N/A'}</span>
+                    <button onclick="copyToClipboard('${dep.txn_id || ''}')" style="background: none; border: none; color: #3b82f6; cursor: pointer; display: inline-flex; align-items: center; vertical-align: middle; padding: 0; margin-left: 0.35rem;" title="Copy Transaction ID">
+                        <span class="material-symbols-outlined" style="font-size: 13px;">content_copy</span>
+                    </button>
+                </td>
                 <td>
                     ${dep.screenshot_path ? `<a href="${dep.screenshot_path}" target="_blank" style="color: #3b82f6; text-decoration: underline; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;"><span class="material-symbols-outlined" style="font-size: 1rem;">image</span>View Screenshot</a>` : `<span style="color: #64748b; font-size: 0.8rem;">No screenshot</span>`}
                 </td>

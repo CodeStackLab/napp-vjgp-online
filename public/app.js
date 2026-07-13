@@ -3,6 +3,13 @@
 const API_BASE = '/api';
 let selectedDepositAmount = 50.00;
 
+// Copy to Clipboard Utility
+function copyToClipboard(text, message = "Copied to clipboard!") {
+    navigator.clipboard.writeText(text)
+        .then(() => showToast(message))
+        .catch(() => showToast("Failed to copy."));
+}
+
 // Format Currency Helper
 function formatUSD(amount) {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -637,7 +644,12 @@ function renderDepositsTable(deposits) {
         <tr style="border-bottom: 1px solid #1e2538;">
             <td style="padding: 1rem 1.25rem; color: #cbd5e1; font-size: 0.85rem;">${dep.date || 'Today'}</td>
             <td style="padding: 1rem 1.25rem; font-weight: 700; color: #f8fafc; font-size: 0.85rem;">${formattedAmount}</td>
-            <td style="padding: 1rem 1.25rem; color: #cbd5e1; font-size: 0.85rem; font-family: monospace;">${dep.txn_id || 'TXN7f3e8d9c2a1b4f...'}</td>
+            <td style="padding: 1rem 1.25rem; color: #cbd5e1; font-size: 0.85rem; font-family: monospace; white-space: nowrap;">
+                <span>${dep.txn_id || 'TXN7f3e8d9c2a1b4f...'}</span>
+                <button onclick="copyToClipboard('${dep.txn_id || ''}')" style="background: none; border: none; color: #3b82f6; cursor: pointer; display: inline-flex; align-items: center; vertical-align: middle; padding: 0; margin-left: 0.35rem;" title="Copy Transaction ID">
+                    <span class="material-symbols-outlined" style="font-size: 13px;">content_copy</span>
+                </button>
+            </td>
             <td style="padding: 1rem 1.25rem;">
                 <span style="background-color: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600;">${dep.status}</span>
             </td>
@@ -667,7 +679,12 @@ function renderAllTransactionsTable(transactions) {
                 <td>${tx.date}</td>
                 <td style="font-weight:600; color: ${typeColor};">${tx.type}</td>
                 <td style="font-weight: 700; color: #f8fafc;">$${tx.amount.toFixed(2)}</td>
-                <td class="deposit-tx-hash">${tx.ref.substring(0, 16)}...</td>
+                <td class="deposit-tx-hash" style="font-family: monospace; white-space: nowrap;">
+                    <span>${tx.ref.substring(0, 16)}...</span>
+                    <button onclick="copyToClipboard('${tx.ref}')" style="background: none; border: none; color: #3b82f6; cursor: pointer; display: inline-flex; align-items: center; vertical-align: middle; padding: 0; margin-left: 0.35rem;" title="Copy Full Reference">
+                        <span class="material-symbols-outlined" style="font-size: 13px;">content_copy</span>
+                    </button>
+                </td>
                 <td>
                     <span class="status-badge-lbl ${tx.status.toLowerCase()}">${tx.status}</span>
                 </td>
@@ -947,8 +964,15 @@ function applyCustomAmount() {
 }
 
 async function submitNewDeposit() {
+    const txIdInput = document.getElementById('deposit-txid-input');
+    const txnId = txIdInput ? txIdInput.value.trim() : '';
+
+    if (!txnId) {
+        alert("Please enter your Transaction ID or Hash.");
+        return;
+    }
+
     const screenshotEl = document.getElementById('deposit-screenshot-input');
-    
     if (!screenshotEl || !screenshotEl.files || screenshotEl.files.length === 0) {
         alert("Please upload a screenshot of your payment.");
         return;
@@ -978,7 +1002,7 @@ async function submitNewDeposit() {
                 method: 'POST',
                 body: JSON.stringify({
                     amount: currentSelectedDepositAmount,
-                    txnId: "N/A",
+                    txnId: txnId,
                     screenshotBase64: base64Image,
                     planName: planName || null
                 })
@@ -988,6 +1012,7 @@ async function submitNewDeposit() {
             if (successModal) {
                 successModal.style.display = 'flex';
             }
+            if (txIdInput) txIdInput.value = "";
             screenshotEl.value = "";
             const statusText = document.getElementById('upload-status-text');
             if (statusText) {

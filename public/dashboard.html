@@ -352,6 +352,10 @@
                     </div>
 
                     <div style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 1rem; background-color: #0c0f1a; border: 1px solid #1e2538; border-radius: 12px; padding: 1.5rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <label style="font-size: 0.85rem; color: #94a3b8; font-weight: 600;">Transaction ID / Hash (Pasted)</label>
+                            <input type="text" id="deposit-txid-input" placeholder="Paste your TRX / TRC20 Transaction Hash here" style="background-color: #111622; border: 1px solid #1e2538; border-radius: 6px; padding: 0.75rem 1rem; color: #f8fafc; font-size: 0.95rem; outline: none; width: 100%;">
+                        </div>
                         <span style="font-size: 0.88rem; font-weight: 700; color: #f8fafc; letter-spacing: 0.3px;">Submit your Payment Screenshot for verification:</span>
                         
                         <!-- Premium Custom Upload Area -->
@@ -373,7 +377,13 @@
                 
                 <!-- Recent Deposits Table -->
                 <div class="recent-deposits-section">
-                    <h2 class="recent-deposits-title font-display" style="font-size: 1.2rem; margin-bottom: 1rem;">Recent Deposits</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <h2 class="recent-deposits-title font-display" style="font-size: 1.2rem; margin: 0;">Recent Deposits</h2>
+                        <button onclick="fetchAllDashboardData(); showToast('Deposits refreshed!')" style="background: #1e293b; color: #f8fafc; border: 1px solid #334155; padding: 0.45rem 0.9rem; border-radius: 6px; font-weight: 700; display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.78rem; transition: background 0.2s;" onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#1e293b'">
+                            <span class="material-symbols-outlined" style="font-size: 1.05rem;">refresh</span>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
                     
                     <div class="table-responsive-box" style="background-color: #111622; border: 1px solid #1e2538; border-radius: 8px; overflow-x: auto;">
                         <table class="deposits-table-list" style="width: 100%; border-collapse: collapse; min-width: 600px;">
@@ -678,6 +688,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="app.js?v=2.6"></script>
+    <script src="app.js?v=2.7"></script>
 </body>
 </html>
