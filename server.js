@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -9,6 +10,8 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = process.env.PORT || 80;
 const JWT_SECRET = 'nova-super-secret-key-2026';
+
+app.use(compression());
 
 // Increase payload limit to support base64 uploads
 app.use(express.json({ limit: '15mb' }));
@@ -1013,7 +1016,7 @@ app.get('/', (req, res) => {
 });
 
 // Serve static assets from public folder
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0 }));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1d' }));
 
 // Clean HTML URL Routes
 app.get('/login', (req, res) => {
