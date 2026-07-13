@@ -388,7 +388,26 @@
         body.dark-theme .forgot-link:hover {
             color: #60a5fa;
         }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .auth-logo {
+                display: none !important;
+            }
+            .auth-main-wrapper {
+                padding: 1rem;
+                min-height: calc(100vh - 140px);
+            }
+            .auth-card {
+                padding: 2rem 1.5rem;
+                border-radius: 12px;
+            }
+        }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
 </head>
 <body class="landing-body">
 
@@ -873,6 +892,13 @@
                 if (arrow) arrow.style.display = 'none';
             }
         });
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
     </script>
 </body>
 </html>
