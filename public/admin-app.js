@@ -267,6 +267,14 @@ function renderDepositsTable(deposits) {
     const tbody = document.getElementById('admin-deposits-table-body');
     if (!tbody) return;
 
+    let pendingCount = deposits.filter(d => d.status === 'Pending').length;
+    if (pendingCount > 0 && !window.hasShownPendingDepositsToast) {
+        window.hasShownPendingDepositsToast = true;
+        setTimeout(() => {
+            showToast(`You have ${pendingCount} pending deposit(s) awaiting review!`);
+        }, 1500);
+    }
+
     if (deposits.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b;">No deposits log found.</td></tr>`;
         return;
