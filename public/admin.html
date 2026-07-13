@@ -63,12 +63,6 @@
                     <span>Support Tickets</span>
                 </a>
             </li>
-            <li>
-                <a href="#" class="sidebar-item-link logout">
-                    <span class="material-symbols-outlined sidebar-icon">logout</span>
-                    <span>Logout</span>
-                </a>
-            </li>
         </ul>
     </aside>
     
@@ -83,7 +77,7 @@
                 <span class="material-symbols-outlined">menu</span>
             </button>
             
-            <div class="header-right-user">
+            <div class="header-right-user" style="margin-left: auto;">
                 <div class="user-card-info" id="admin-profile-menu-btn" style="cursor: pointer; position: relative; background: none; border: none; padding: 0; display: flex; align-items: center; gap: 0.5rem;">
                     <div class="user-avatar-circle" style="background-color: #3b82f6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" style="width: 20px; height: 20px; display: block;">
@@ -96,10 +90,14 @@
                     </div>
                     
                     <!-- Dropdown Menu -->
-                    <div class="profile-dropdown-menu" id="admin-dropdown-menu" style="display: none; position: absolute; top: 115%; right: 0; background-color: #1e2538; border: 1px solid #2e384e; border-radius: 8px; width: 140px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); z-index: 1000; padding: 0.5rem 0;">
-                        <a href="/" class="dropdown-item logout-action-btn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; color: #f87171; font-size: 0.85rem; text-decoration: none; font-weight: 500;">
-                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">logout</span>
-                            <span>Logout</span>
+                    <div class="profile-dropdown-menu" id="admin-dropdown-menu" style="display: none; position: absolute; top: 115%; right: 0; background-color: #1e2538; border: 1px solid #2e384e; border-radius: 8px; width: 160px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); z-index: 1000; padding: 0.5rem 0;">
+                        <a href="#" onclick="openAdminChangeEmailModal(); return false;" class="dropdown-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; color: #60a5fa; font-size: 0.85rem; text-decoration: none; font-weight: 500;">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">mail</span>
+                            <span>Change Email</span>
+                        </a>
+                        <a href="#" class="dropdown-item logout-action-btn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; color: #f87171; font-size: 0.85rem; text-decoration: none; font-weight: 500; border-top: 1px solid #2e384e;">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem; color: #f87171;">logout</span>
+                            <span style="color: #f87171;">Logout</span>
                         </a>
                     </div>
                 </div>
@@ -121,6 +119,16 @@
                             <span class="metric-card-value-txt" id="stat-users">0</span>
                             <div class="metric-card-icon-box">
                                 <span class="material-symbols-outlined">group</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card-box">
+                        <div class="metric-card-label">Total Active Users</div>
+                        <div class="metric-card-val-row">
+                            <span class="metric-card-value-txt" id="stat-active-users">0</span>
+                            <div class="metric-card-icon-box" style="color: #a855f7; background-color: rgba(168, 85, 247, 0.1);">
+                                <span class="material-symbols-outlined">person_celebrate</span>
                             </div>
                         </div>
                     </div>
@@ -152,6 +160,27 @@
                         Database engine is fully initialized and listening for requests. Background schedules for compiling movie plan payout metrics are executing at 15-second intervals.
                     </p>
                 </div>
+
+                <!-- TRON Deposit Address Quick Action -->
+                <div style="margin-top: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(185, 28, 28, 0.15) 100%); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="background-color: rgba(239, 68, 68, 0.15); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <span class="material-symbols-outlined" style="color: #f87171; font-size: 1.4rem;">account_balance_wallet</span>
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; color: #f8fafc; font-size: 0.95rem;" class="font-display">TRON Deposit Address (TRC20)</div>
+                            <div id="admin-tron-address-preview" style="font-size: 0.78rem; color: #10b981; font-family: monospace; margin-top: 0.2rem;">Loading...</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button onclick="copyAdminTronAddress()" style="background-color: #1e2538; border: 1px solid #2e384e; color: #94a3b8; padding: 0.5rem 0.85rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">content_copy</span> Copy
+                        </button>
+                        <button onclick="openTronAddressModal()" style="background: linear-gradient(135deg, #e05252, #b91c1c); border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">edit</span> Change Address
+                        </button>
+                    </div>
+                </div>
             </section>
 
             <!-- PANEL: MANAGE USERS -->
@@ -174,7 +203,6 @@
                                 <tr>
                                     <th>User Info</th>
                                     <th>Balance</th>
-                                    <th>Role</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -225,6 +253,7 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>User</th>
+                                    <th>Wallet Address</th>
                                     <th>Amount</th>
                                     <th>Tx Reference</th>
                                     <th>Status</th>
@@ -264,6 +293,20 @@
                         <div>
                             <label class="form-label-db">Price (USDT)</label>
                             <input type="number" id="admin-plan-price" placeholder="e.g. 100" class="form-input-db" style="width: 100%;">
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label class="form-label-db">Plan Image / Poster</label>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.35rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; background-color: #1e2538; border: 1px solid #2e384e; color: #94a3b8; padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
+                                    <span class="material-symbols-outlined" style="font-size: 1.1rem;">upload</span>
+                                    Upload Image
+                                    <input type="file" id="admin-plan-image-file" accept="image/*" style="display:none;" onchange="handlePlanImageSelect(event, 'create')">
+                                </label>
+                                <input type="text" id="admin-plan-image-url" placeholder="Or paste image URL..." class="form-input-db" style="flex-grow: 1;">
+                            </div>
+                            <div id="create-plan-img-preview-wrap" style="display:none; margin-top: 0.5rem; background-color: #0b0e14; border: 1px solid #1e2538; border-radius: 8px; padding: 0.5rem; width: fit-content;">
+                                <img id="create-plan-img-preview" src="" style="height: 60px; border-radius: 4px; display: block;">
+                            </div>
                         </div>
                         <div>
                             <label class="form-label-db">Daily Return %</label>
@@ -324,48 +367,68 @@
                 </div>
             </section>
 
-            <!-- PANEL: SUPPORT TICKETS -->
+            <!-- PANEL: SUPPORT TICKETS (RE-DESIGNED LIVE CHAT) -->
             <section id="panel-tickets" class="dashboard-panel-view">
-                <h1 class="panel-title font-display">Support Tickets</h1>
-                <p class="panel-desc">Reply to support tickets and manage resolving client issues.</p>
+                <h1 class="panel-title font-display">NOVA Live Support Desk</h1>
+                <p class="panel-desc">Manage 1-on-1 client chat channels, upload screenshots, and close or open conversation channels in real time.</p>
                 
-                <div class="recent-deposits-section" style="margin-bottom: 2rem;">
-                    <div class="table-responsive-box">
-                        <table class="deposits-table-list">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>User</th>
-                                    <th>Ticket ID</th>
-                                    <th>Subject</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="admin-tickets-table-body">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Reply Panel Container (Hidden by default) -->
-                <div id="admin-reply-box-container" class="deposit-step-box" style="display: none;">
-                    <h3 class="step-title-number font-display" id="reply-ticket-header">Reply to Ticket #47291</h3>
-                    
-                    <div style="margin-bottom: 1.25rem;">
-                        <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem;">User Query Message:</p>
-                        <p id="reply-ticket-user-msg" style="font-size: 0.9rem; color: #cbd5e1; background-color: #0b0e14; border: 1px solid #1e2538; padding: 1rem; border-radius: 8px; line-height: 1.5;"></p>
+                <div style="display: grid; grid-template-columns: 280px 1fr; gap: 1rem; background-color: #111622; border: 1px solid #1e2538; border-radius: 12px; height: 600px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                    <!-- Left Pane: User List -->
+                    <div style="background-color: #171d2c; border-right: 1px solid #1e2538; display: flex; flex-direction: column;">
+                        <div style="padding: 1rem; border-bottom: 1px solid #1e2538; font-weight: 700; color: #f8fafc;" class="font-display">
+                            Conversations
+                        </div>
+                        <div style="flex-grow: 1; overflow-y: auto;" id="admin-chat-users-list">
+                            <!-- Populated dynamically -->
+                            <p style="text-align: center; color: #64748b; font-size: 0.85rem; padding: 1.5rem 0;">No active threads found.</p>
+                        </div>
                     </div>
 
-                    <div class="form-group-db">
-                        <label class="form-label-db">Admin Reply Message</label>
-                        <textarea id="reply-ticket-text" rows="4" placeholder="Enter reply message..." class="form-input-db" style="font-family: inherit; resize: none;"></textarea>
-                    </div>
-                    
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="submitAdminTicketReply()" class="form-btn-db" style="background-color: #10b981;">Send Reply & Resolve</button>
-                        <button onclick="closeAdminReplyBox()" class="form-btn-db" style="background-color: #1e2538; border: 1px solid #2e384e; color: #cbd5e1;">Cancel</button>
+                    <!-- Right Pane: Active Chat Box -->
+                    <div style="display: flex; flex-direction: column; background-color: #0b0e14; height: 100%; position: relative;">
+                        <!-- Header -->
+                        <div style="padding: 0.85rem 1.25rem; background-color: #171d2c; border-bottom: 1px solid #1e2538; display: flex; justify-content: space-between; align-items: center;" id="admin-chat-header">
+                            <div>
+                                <span id="admin-chat-user-name" style="font-weight: 700; color: #f8fafc;" class="font-display">Select a conversation thread</span>
+                                <span id="admin-chat-user-email" style="font-size: 0.75rem; color: #94a3b8; display: block;">Click on a user from the list to start messaging</span>
+                            </div>
+                            <!-- Thread Status Toggle Button -->
+                            <div id="admin-chat-status-toggle-container" style="display: none; align-items: center; gap: 0.5rem;">
+                                <span id="admin-chat-thread-status" class="status-badge-lbl pending">Closed</span>
+                                <button id="admin-chat-toggle-btn" onclick="toggleCurrentThreadStatus()" style="background-color: #1e2538; border: 1px solid #2e384e; color: #f8fafc; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">Toggle Status</button>
+                            </div>
+                        </div>
+
+                        <!-- Chat messages view -->
+                        <div style="flex-grow: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem;" id="admin-chat-messages-container">
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #64748b;">
+                                <span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 0.5rem;">chat</span>
+                                <p style="font-size: 0.9rem;">Select a client from the left panel to load active conversations.</p>
+                            </div>
+                        </div>
+
+                        <!-- Input Area -->
+                        <div id="admin-chat-input-box" style="display: none; flex-direction: column;">
+                            <!-- Attached Image Preview -->
+                            <div id="admin-chat-image-preview-box" style="display: none; padding: 0.5rem 1rem; border-top: 1px solid #1e2538; background-color: #0b0e14; align-items: center; gap: 0.5rem;">
+                                <img id="admin-chat-image-preview-thumb" src="" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                <span style="font-size: 0.8rem; color: #94a3b8; flex-grow: 1;">Screenshot attached</span>
+                                <button onclick="clearAdminChatImageSelection()" style="background: none; border: none; color: #ef4444; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;">
+                                    <span class="material-symbols-outlined" style="font-size: 1.1rem;">cancel</span>
+                                </button>
+                            </div>
+                            <!-- Input Row -->
+                            <div class="chat-input-area" style="border-top: 1px solid #1e2538; border-radius: 0; padding: 0.75rem 1rem; background-color: #171d2c;">
+                                <input type="file" id="admin-chat-screenshot-file" accept="image/*" style="display:none;" onchange="handleAdminChatImageSelect(event)">
+                                <button onclick="document.getElementById('admin-chat-screenshot-file').click()" style="background:none; border:none; color:#fbbf24; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0 0.5rem;" title="Attach Screenshot">
+                                    <span class="material-symbols-outlined" style="font-size:1.4rem;">photo_camera</span>
+                                </button>
+                                <input type="text" id="admin-chat-message-input" placeholder="Type reply here..." class="chat-input" onkeydown="if(event.key === 'Enter') sendAdminChatMessage()" style="flex-grow: 1; background-color: #0b0e14; border: 1px solid #1e2538; color: #f8fafc; padding: 0.65rem 1rem; border-radius: 8px; font-size: 0.85rem; outline: none; margin-right: 0.5rem;">
+                                <button onclick="sendAdminChatMessage()" class="chat-send-btn" title="Send Reply" style="background-color: #3b82f6; border: none; color: white; padding: 0.65rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                    <span class="material-symbols-outlined">send</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -445,7 +508,20 @@
                     <label class="modal-input-label" style="display: block; margin-bottom: 0.35rem;">Daily Return Rate</label>
                     <input type="text" id="edit-plan-roi" class="modal-text-input" style="width: 100%; background: #0c0f1a; border: 1px solid #1e2538; padding: 0.75rem; border-radius: 6px; color: #f8fafc;">
                 </div>
-            </div>
+                <div>
+                    <label class="modal-input-label" style="display: block; margin-bottom: 0.35rem;">Plan Image / Poster</label>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; background-color: #1e2538; border: 1px solid #2e384e; color: #94a3b8; padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">upload</span>
+                            Upload Image
+                            <input type="file" id="edit-plan-image-file" accept="image/*" style="display:none;" onchange="handlePlanImageSelect(event, 'edit')">
+                        </label>
+                        <input type="text" id="edit-plan-image-url" placeholder="Or paste image URL..." class="modal-text-input" style="flex-grow: 1; background: #0c0f1a; border: 1px solid #1e2538; padding: 0.75rem; border-radius: 6px; color: #f8fafc;">
+                    </div>
+                    <div id="edit-plan-img-preview-wrap" style="display:none; margin-top: 0.5rem; background-color: #0b0e14; border: 1px solid #1e2538; border-radius: 8px; padding: 0.5rem; width: fit-content;">
+                        <img id="edit-plan-img-preview" src="" style="height: 60px; border-radius: 4px; display: block;">
+                    </div>
+                </div>
             
             <button onclick="saveEditPlan()" class="modal-submit-btn" style="background-color: #3b82f6; color: white; width: 100%; padding: 0.85rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">Save Plan Changes</button>
         </div>
@@ -520,7 +596,94 @@
         </div>
     </div>
 
+    <!-- MODAL OVERLAY: REFERRED MEMBERS -->
+    <div id="referred-members-modal" class="modal-overlay">
+        <div class="modal-content-box" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title font-display" id="ref-modal-title">Referred Members</h3>
+                <button class="modal-close-btn" onclick="closeReferredMembersModal()">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="modal-form-group">
+                <div style="max-height: 300px; overflow-y: auto;" id="ref-members-list-container">
+                    <!-- Dynamic list of referred members -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADMIN CHANGE EMAIL -->
+    <div id="admin-change-email-modal" class="modal-overlay">
+        <div class="modal-content-box" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3 class="modal-title font-display">Change Admin Email</h3>
+                <button class="modal-close-btn" onclick="closeAdminChangeEmailModal()">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <!-- Step 1: Enter current password + new email -->
+            <div id="admin-email-step-1">
+                <p class="modal-subtitle" style="color:#94a3b8; margin-bottom: 1.25rem; font-size: 0.85rem;">Enter your current password and the new email address to receive a verification OTP.</p>
+                <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label class="modal-input-label" style="display: block; margin-bottom: 0.35rem;">Current Password</label>
+                        <input type="password" id="admin-change-email-password" placeholder="••••••••" class="modal-text-input" style="width: 100%; background: #0c0f1a; border: 1px solid #1e2538; padding: 0.75rem; border-radius: 6px; color: #f8fafc; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label class="modal-input-label" style="display: block; margin-bottom: 0.35rem;">New Email Address</label>
+                        <input type="email" id="admin-change-email-new" placeholder="new@example.com" class="modal-text-input" style="width: 100%; background: #0c0f1a; border: 1px solid #1e2538; padding: 0.75rem; border-radius: 6px; color: #f8fafc; box-sizing: border-box;">
+                    </div>
+                </div>
+                <button onclick="adminSendChangeEmailOtp()" class="modal-submit-btn" style="background-color: #3b82f6; color: white; width: 100%; padding: 0.85rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">Send OTP to New Email</button>
+            </div>
+
+            <!-- Step 2: Enter OTP -->
+            <div id="admin-email-step-2" style="display: none;">
+                <p class="modal-subtitle" style="color: #10b981; margin-bottom: 1.25rem; font-size: 0.85rem;">OTP sent to your new email! Please check your inbox.</p>
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="modal-input-label" style="display: block; margin-bottom: 0.35rem;">Enter 6-Digit OTP</label>
+                    <input type="text" id="admin-change-email-otp" placeholder="123456" maxlength="6" class="modal-text-input" style="width: 100%; background: #0c0f1a; border: 1px solid #1e2538; padding: 0.75rem; border-radius: 6px; color: #f8fafc; font-size: 1.1rem; letter-spacing: 0.2rem; text-align: center; box-sizing: border-box;">
+                </div>
+                <button onclick="adminVerifyChangeEmailOtp()" class="modal-submit-btn" style="background-color: #10b981; color: white; width: 100%; padding: 0.85rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">Verify & Change Email</button>
+                <button onclick="document.getElementById('admin-email-step-1').style.display='block'; document.getElementById('admin-email-step-2').style.display='none';" style="background: none; border: none; color: #94a3b8; font-size: 0.8rem; cursor: pointer; width: 100%; margin-top: 0.75rem;">← Back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: TRON DEPOSIT ADDRESS SETTINGS -->
+    <div id="tron-address-modal" class="modal-overlay">
+        <div class="modal-content-box" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 class="modal-title font-display">TRON Deposit Address (TRC20)</h3>
+                <button class="modal-close-btn" onclick="closeTronAddressModal()">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.25rem;">This address will be shown to all users on the Deposit page. Changing it takes effect immediately.</p>
+            <div style="margin-bottom: 1rem;">
+                <label class="modal-input-label" style="display: block; margin-bottom: 0.35rem;">Current TRON Wallet Address (TRC20)</label>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="text" id="tron-address-current-display" readonly class="modal-text-input" style="flex-grow: 1; background: #0b0e14; border: 1px solid #1e2538; padding: 0.75rem; border-radius: 6px; color: #10b981; font-family: monospace; font-size: 0.85rem; box-sizing: border-box;">
+                    <button onclick="copyTronAddress()" style="background-color: #1e2538; border: 1px solid #2e384e; color: #94a3b8; padding: 0.75rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <span class="material-symbols-outlined" style="font-size: 1.1rem;">content_copy</span>
+                    </button>
+                </div>
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+                <label class="modal-input-label" style="display: block; margin-bottom: 0.35rem;">New TRON Wallet Address</label>
+                <input type="text" id="tron-address-new-input" placeholder="Enter new TRC20 wallet address..." class="modal-text-input" style="width: 100%; background: #0c0f1a; border: 1px solid #1e2538; padding: 0.75rem; border-radius: 6px; color: #f8fafc; font-family: monospace; font-size: 0.85rem; box-sizing: border-box;">
+            </div>
+            <button onclick="saveTronAddress()" class="modal-submit-btn" style="background: linear-gradient(135deg, #e05252 0%, #b91c1c 100%); color: white; width: 100%; padding: 0.85rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <span class="material-symbols-outlined" style="font-size: 1.1rem;">save</span>
+                Save New Deposit Address
+            </button>
+        </div>
+    </div>
+
     <!-- Admin Panel Javascript -->
-    <script src="admin-app.js?v=1.7"></script>
+    <script src="admin-app.js?v=2.1"></script>
 </body>
 </html>

@@ -389,18 +389,158 @@
             color: #60a5fa;
         }
 
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            .auth-logo {
+        /* =============================================
+           MOBILE RESPONSIVENESS - ALL SCREEN SIZES
+           ============================================= */
+
+        /* Base: ensure full-width inputs on all screens */
+        .auth-card .form-input-db,
+        .auth-card select,
+        .auth-card textarea {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Small phones: 320px - 480px */
+        @media (max-width: 480px) {
+            .landing-header {
+                padding: 0.5rem 1rem !important;
+            }
+            .nav-links {
                 display: none !important;
             }
+            .landing-header .container-header {
+                padding: 0 0.75rem !important;
+            }
             .auth-main-wrapper {
-                padding: 1rem;
-                min-height: calc(100vh - 140px);
+                padding: 0.75rem 0.75rem !important;
+                min-height: 100vh;
+                align-items: flex-start;
+                padding-top: 1rem !important;
             }
             .auth-card {
-                padding: 2rem 1.5rem;
-                border-radius: 12px;
+                padding: 1.5rem 1.25rem !important;
+                border-radius: 16px !important;
+                max-width: 100% !important;
+                margin: 0;
+            }
+            .auth-logo {
+                margin-bottom: 1.25rem !important;
+            }
+            .auth-logo img {
+                max-height: 36px !important;
+            }
+            .auth-tabs {
+                margin-bottom: 1.25rem !important;
+            }
+            .auth-tab-btn {
+                font-size: 0.8rem !important;
+                padding: 0.5rem 0.35rem !important;
+            }
+            .auth-btn {
+                padding: 0.7rem !important;
+                font-size: 0.85rem !important;
+                margin-top: 1rem !important;
+            }
+            .step-pane-title {
+                font-size: 1rem !important;
+            }
+            .signup-steps-indicator {
+                gap: 0.25rem !important;
+                margin-bottom: 1.25rem !important;
+            }
+            .step-indicator-item {
+                width: 26px !important;
+                height: 26px !important;
+                font-size: 0.75rem !important;
+            }
+            .step-indicator-line {
+                max-width: 30px !important;
+            }
+            .demo-credentials-box {
+                padding: 0.75rem !important;
+                font-size: 0.8rem !important;
+            }
+            .demo-row {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 0.25rem;
+            }
+            /* Header profile/user section */
+            #landing-profile-btn span:last-of-type {
+                display: none;
+            }
+        }
+
+        /* Medium phones: 481px - 640px */
+        @media (min-width: 481px) and (max-width: 640px) {
+            .auth-main-wrapper {
+                padding: 1rem !important;
+            }
+            .auth-card {
+                padding: 2rem 1.5rem !important;
+                border-radius: 16px !important;
+            }
+            .nav-links {
+                display: none !important;
+            }
+        }
+
+        /* Tablets: 641px - 768px */
+        @media (min-width: 641px) and (max-width: 768px) {
+            .auth-main-wrapper {
+                padding: 1.5rem !important;
+            }
+            .auth-card {
+                padding: 2.5rem 2rem !important;
+            }
+        }
+
+        /* All mobile (up to 768px) — shared overrides */
+        @media (max-width: 768px) {
+            .auth-logo {
+                display: flex !important;
+                justify-content: center;
+                margin-bottom: 1.5rem;
+            }
+            .auth-main-wrapper {
+                min-height: calc(100vh - 60px);
+            }
+            .auth-card {
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: 1px solid rgba(255,255,255,0.07) !important;
+            }
+            /* Ensure inputs are touch-friendly */
+            .auth-card .form-input-db {
+                font-size: 16px !important; /* prevents iOS zoom on focus */
+                padding: 0.8rem 1rem !important;
+                min-height: 48px;
+            }
+            /* Full-width buttons */
+            .auth-btn {
+                min-height: 48px;
+                border-radius: 10px !important;
+            }
+            /* Landing header adjustments */
+            .landing-header {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+            .container-header {
+                padding: 0 1rem !important;
+            }
+            /* Hide text label next to user avatar in header */
+            #landing-profile-btn > span:first-of-type {
+                display: none;
+            }
+            /* Forgot password + form labels */
+            .form-label-db {
+                font-size: 0.82rem !important;
+            }
+            .forgot-link-box {
+                margin-top: 0.25rem;
             }
         }
     </style>
@@ -563,20 +703,34 @@
 
         <!-- FORM: FORGOT PASSWORD -->
         <div class="auth-form-container" id="form-forgot">
-            <form onsubmit="submitForgot(event)">
+            <div id="forgot-step-1">
                 <div class="form-group-db">
                     <label class="form-label-db">Account Email Address</label>
                     <input type="email" id="forgot-email" required placeholder="john.doe@example.com" class="form-input-db">
                 </div>
-                <div class="form-group-db" style="margin-top: 1rem;">
-                    <label class="form-label-db">Choose New Password</label>
-                    <input type="password" id="forgot-new-password" required placeholder="••••••••" class="form-input-db">
-                </div>
                 <div class="forgot-link-box" style="justify-content: flex-start; margin-top: 0.75rem;">
                     <a href="#signin" class="forgot-link" onclick="event.preventDefault(); switchAuthTab('signin')">Back to Login</a>
                 </div>
-                <button type="submit" class="auth-btn">Reset Password</button>
-            </form>
+                <button type="button" class="auth-btn" onclick="sendForgotOTP()">Send OTP</button>
+            </div>
+
+            <div id="forgot-step-2" style="display: none;">
+                <p class="step-pane-subtitle" style="margin-bottom: 1rem; color: #10b981;">OTP sent to your email! Please check your inbox.</p>
+                <div class="form-group-db">
+                    <label class="form-label-db">Enter 6-Digit OTP</label>
+                    <input type="text" id="forgot-otp" placeholder="123456" class="form-input-db">
+                </div>
+                <button type="button" class="auth-btn" style="margin-top: 1rem;" onclick="verifyForgotOTP()">Verify OTP</button>
+            </div>
+
+            <div id="forgot-step-3" style="display: none;">
+                <p class="step-pane-subtitle" style="margin-bottom: 1rem; color: #10b981;">OTP Verified! Enter your new password.</p>
+                <div class="form-group-db">
+                    <label class="form-label-db">Choose New Password</label>
+                    <input type="password" id="forgot-new-password" placeholder="••••••••" class="form-input-db">
+                </div>
+                <button type="button" class="auth-btn" style="margin-top: 1rem;" onclick="submitNewPassword()">Reset Password & Login</button>
+            </div>
         </div>
     </div>
     </main>
@@ -669,11 +823,10 @@
                     return;
                 }
             } else if (stepNum === 3) {
-                const usernameVal = document.getElementById('signup-username').value.trim();
                 const passwordVal = document.getElementById('signup-password').value;
                 const confirmVal = document.getElementById('signup-confirm').value;
-                if (!usernameVal || !passwordVal || !confirmVal) {
-                    alert("Please fill in Username, Password, and Confirm Password.");
+                if (!passwordVal || !confirmVal) {
+                    alert("Please fill in Password and Confirm Password.");
                     return;
                 }
                 if (passwordVal !== confirmVal) {
@@ -743,7 +896,6 @@
             e.preventDefault();
             const name = document.getElementById('signup-name').value;
             const email = document.getElementById('signup-email').value;
-            const username = document.getElementById('signup-username').value;
             const password = document.getElementById('signup-password').value;
             const confirm = document.getElementById('signup-confirm').value;
             const referralCode = document.getElementById('signup-ref').value;
@@ -757,7 +909,7 @@
                 const response = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, username, password, referralCode })
+                    body: JSON.stringify({ name, email, password, referralCode })
                 });
 
                 const data = await response.json();
@@ -772,28 +924,6 @@
             }
         }
 
-        // Submit Forgot Password API Call (Interactive Password Reset)
-        async function submitForgot(e) {
-            e.preventDefault();
-            const email = document.getElementById('forgot-email').value;
-            const newPassword = document.getElementById('forgot-new-password').value;
-
-            try {
-                const response = await fetch('/api/auth/forgot-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, newPassword })
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.message || 'Reset failed');
-
-                alert(data.message);
-                switchAuthTab('signin');
-            } catch (err) {
-                alert(err.message);
-            }
-        }
 
         // Mobile Nav Toggle logic
         const navToggleBtn = document.querySelector('.nav-toggle-btn');
@@ -887,3 +1017,85 @@
     </script>
 </body>
 </html>
+
+<script>
+// Forgot Password Flow (OTP)
+async function sendForgotOTP() {
+    const email = document.getElementById('forgot-email').value;
+    if (!email) {
+        alert('Please enter your email address');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/auth/forgot-password/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Failed to send OTP');
+
+        document.getElementById('forgot-step-1').style.display = 'none';
+        document.getElementById('forgot-step-2').style.display = 'block';
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function verifyForgotOTP() {
+    const otpCode = document.getElementById('forgot-otp').value;
+    if (!otpCode) {
+        alert('Please enter OTP');
+        return;
+    }
+    
+    // We verify this on the server along with the password reset
+    document.getElementById('forgot-step-2').style.display = 'none';
+    document.getElementById('forgot-step-3').style.display = 'block';
+}
+
+async function submitNewPassword() {
+    const email = document.getElementById('forgot-email').value;
+    const otpCode = document.getElementById('forgot-otp').value;
+    const newPassword = document.getElementById('forgot-new-password').value;
+
+    if (!newPassword || newPassword.length < 6) {
+        alert('Password must be at least 6 characters');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/auth/forgot-password/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otpCode, newPassword })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Reset failed');
+
+        alert('Password reset successfully! Logging you in...');
+        
+        // Auto-login
+        const loginResp = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: newPassword })
+        });
+        
+        const loginData = await loginResp.json();
+        if (loginResp.ok) {
+            localStorage.setItem('nova_token', loginData.token);
+            localStorage.setItem('nova_role', loginData.user.role);
+            window.location.href = loginData.user.role === 'admin' ? '/admin-dashboard' : '/user-dashboard';
+        } else {
+            switchAuthTab('signin');
+        }
+
+    } catch (err) {
+        alert(err.message);
+    }
+}
+</script>

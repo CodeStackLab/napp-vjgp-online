@@ -72,12 +72,6 @@
                     <span>Support</span>
                 </a>
             </li>
-            <li style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #1e2538;">
-                <a href="/" class="sidebar-item-link logout">
-                    <span class="material-symbols-outlined sidebar-icon" style="color: #f87171;">logout</span>
-                    <span style="color: #f87171;">Logout</span>
-                </a>
-            </li>
         </ul>
     </aside>
     
@@ -88,7 +82,7 @@
         
         <!-- Header Bar -->
         <header class="dashboard-header">
-            <button class="header-left-toggle" aria-label="Toggle Menu" style="display: none !important;">
+            <button class="header-left-toggle" aria-label="Toggle Menu">
                 <span class="material-symbols-outlined">menu</span>
             </button>
             
@@ -108,9 +102,13 @@
                     
                     <!-- Dropdown Menu -->
                     <div class="profile-dropdown-menu" id="profile-dropdown-menu" style="display: none; position: absolute; top: 115%; right: 0; background-color: #111622; border: 1px solid #1e2538; border-radius: 8px; width: 140px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); z-index: 1000; padding: 0.5rem 0;">
-                        <a href="/" class="dropdown-item logout-action-btn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; color: #f87171; font-size: 0.85rem; text-decoration: none; font-weight: 500;">
-                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">logout</span>
-                            <span>Logout</span>
+                        <a href="#" class="dropdown-item change-email-action-btn" onclick="openChangeEmailModal(event)" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; color: #3b82f6; font-size: 0.85rem; text-decoration: none; font-weight: 500;">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">mail</span>
+                            <span>Change Email</span>
+                        </a>
+                        <a href="#" class="dropdown-item logout-action-btn" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; color: #f87171; font-size: 0.85rem; text-decoration: none; font-weight: 500; border-top: 1px solid #1e2538;">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem; color: #f87171;">logout</span>
+                            <span style="color: #f87171;">Logout</span>
                         </a>
                     </div>
                 </div>
@@ -143,6 +141,26 @@
                     </div>
                     
                     <div class="metric-card-box">
+                        <div class="metric-card-label">Today's Profit</div>
+                        <div class="metric-card-val-row">
+                            <span class="metric-card-value-txt" id="db-today-profit" style="color: #10b981;">$0.00</span>
+                            <div class="metric-card-icon-box" style="color: #10b981; background-color: rgba(16, 185, 129, 0.1);">
+                                <span class="material-symbols-outlined">trending_up</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card-box">
+                        <div class="metric-card-label">Total Earned</div>
+                        <div class="metric-card-val-row">
+                            <span class="metric-card-value-txt" id="db-total-earned" style="color: #3b82f6;">$0.00</span>
+                            <div class="metric-card-icon-box" style="color: #3b82f6; background-color: rgba(59, 130, 246, 0.1);">
+                                <span class="material-symbols-outlined">payments</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card-box">
                         <div class="metric-card-label">My Referral Code</div>
                         <div class="metric-card-val-row">
                             <span class="metric-card-value-txt" id="db-referral-code" style="color: #fbbf24; font-family: monospace; letter-spacing: 1px;">-</span>
@@ -153,8 +171,28 @@
                     </div>
                 </div>
 
-                <!-- Dynamic Earnings SVG Chart Box -->
-                <!-- Dynamic Earnings SVG Chart Box Removed -->
+                <!-- Track Today's Investments -->
+                <div class="recent-deposits-section" style="margin-top: 2rem;">
+                    <h2 class="recent-deposits-title font-display" style="font-size: 1.2rem; margin-bottom: 1rem;">My Active Investments (Today)</h2>
+                    <div class="table-responsive-box" style="background-color: #111622; border: 1px solid #1e2538; border-radius: 8px; overflow-x: auto;">
+                        <table class="deposits-table-list" style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #1e2538;">
+                                    <th style="text-align: left; padding: 1rem 1.25rem; color: #94a3b8; font-size: 0.8rem; font-weight: 500;">Investment Plan</th>
+                                    <th style="text-align: left; padding: 1rem 1.25rem; color: #94a3b8; font-size: 0.8rem; font-weight: 500;">Amount</th>
+                                    <th style="text-align: left; padding: 1rem 1.25rem; color: #94a3b8; font-size: 0.8rem; font-weight: 500;">Daily ROI</th>
+                                    <th style="text-align: left; padding: 1rem 1.25rem; color: #94a3b8; font-size: 0.8rem; font-weight: 500;">Est. Returns</th>
+                                    <th style="text-align: left; padding: 1rem 1.25rem; color: #94a3b8; font-size: 0.8rem; font-weight: 500;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="active-investments-tbody">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 1.5rem; color: #94a3b8;">No active investments today. Go to 'Investment Plans' to start.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
             </section>
 
@@ -353,9 +391,9 @@
                         <input type="text" id="withdraw-wallet-addr" placeholder="Enter your USDT (TRC20) address" class="form-input-db">
                     </div>
                     
-                    <div class="form-group-db">
+                    <div class="form-group-db" style="margin-top: 1rem;">
                         <label class="form-label-db">Amount to Withdraw (USD)</label>
-                        <input type="number" id="withdraw-amount-val" placeholder="Min. $100.00" class="form-input-db">
+                        <input type="number" id="withdraw-amount-val" placeholder="Min. $20.00 (2% Fee applies)" class="form-input-db">
                     </div>
                     
                     <button onclick="requestWithdrawal()" class="form-btn-db">Submit Request</button>
@@ -366,53 +404,59 @@
 
             <!-- PANEL: REFERRALS -->
             <section id="panel-referrals" class="dashboard-panel-view">
-                <h1 class="panel-title font-display">Referrals</h1>
-                <p class="panel-desc">Share your referral link and earn commissions on your friends' deposits.</p>
+                <h1 class="panel-title font-display">Referrals Program</h1>
+                <p class="panel-desc">Invite your friends to join Nova and build your passive revenue network together.</p>
                 
-                <div class="deposit-step-box" style="margin-bottom: 2rem;">
-                    <h3 class="step-title-number font-display">Your Invitation Link</h3>
+                <!-- Premium Rewards Explanation Card -->
+                <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%); border: 1px solid rgba(168, 85, 247, 0.3); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <span class="material-symbols-outlined" style="font-size: 2.2rem; color: #fbbf24; background: rgba(251, 191, 36, 0.15); padding: 0.5rem; border-radius: 8px;">emoji_events</span>
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.1rem; color: #ffffff;" class="font-display">Earn Network Commissions</h3>
+                            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #94a3b8;">Our direct multi-tier reward system pays out immediately.</p>
+                        </div>
+                    </div>
+                    <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <li><strong>$5.00 Sign-up Reward:</strong> Anyone who signs up using your Referral Code receives an instant $5.00 wallet bonus.</li>
+                        <li><strong>10% Deposit Bonus:</strong> You receive a bonus equal to 10% of their total deposits credited instantly to your balance upon approval.</li>
+                        <li><strong>10% Daily Commission:</strong> You earn 10% of their daily investment profits compounded in real-time.</li>
+                    </ul>
+                    <div style="margin-top: 1rem; font-size: 0.75rem; color: #fbbf24; font-weight: 700; background: rgba(251, 191, 36, 0.08); padding: 0.5rem 1rem; border-radius: 6px; border-left: 3px solid #fbbf24;">
+                        ✨ Referral Bonus will be 10% of total deposit and commission will be 10% of their daily income and $5 will be Bonus for who use Referral Code.
+                    </div>
+                </div>
+
+                <div class="deposit-step-box" style="margin-bottom: 2rem; background-color: #111622; border: 1px solid #1e2538; border-radius: 8px; padding: 1.25rem;">
+                    <h3 class="step-title-number font-display" style="font-size: 1rem; margin-bottom: 0.75rem; color: #f8fafc;">Your Unique Invitation Link</h3>
                     <div style="display: flex; gap: 0.5rem;">
-                        <input type="text" readonly id="referral-link-input" value="http://napp.vjgp.online/register?ref=DEMO889" style="background-color: #0b0e14; border: 1px solid #1e2538; color: #f8fafc; padding: 0.75rem; border-radius: 8px; flex-grow: 1; font-size: 0.85rem; font-family: monospace;">
-                        <button onclick="copyReferralLink()" id="copy-ref-btn" style="background-color: #3b82f6; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">Copy Link</button>
+                        <input type="text" readonly id="referral-link-input" value="http://napp.vjgp.online/register?ref=USER7777" style="background-color: #0b0e14; border: 1px solid #1e2538; color: #f8fafc; padding: 0.75rem; border-radius: 8px; flex-grow: 1; font-size: 0.85rem; font-family: monospace; outline: none;">
+                        <button onclick="copyReferralLink()" id="copy-ref-btn" style="background-color: #3b82f6; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; border: none; cursor: pointer; transition: background 0.2s;">Copy Link</button>
                     </div>
                 </div>
 
                 <div class="db-grid-half">
-                    <div class="recent-deposits-section">
-                        <h3 class="recent-deposits-title">Referral Statistics</h3>
-                        <ul class="db-list-box">
-                            <li class="db-list-item">
-                                <span class="db-list-item-lbl">Total Referrals</span>
-                                <span class="db-item-primary">12 users</span>
+                    <div class="recent-deposits-section" style="background-color: #111622; border: 1px solid #1e2538; border-radius: 8px; padding: 1.25rem;">
+                        <h3 class="recent-deposits-title font-display" style="font-size: 1.1rem; margin-bottom: 1rem; color: #f8fafc;">Referral Statistics</h3>
+                        <ul class="db-list-box" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem;">
+                            <li class="db-list-item" style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid #1e2538;">
+                                <span class="db-list-item-lbl" style="color: #94a3b8; font-size: 0.85rem;">Total Referrals</span>
+                                <span class="db-item-primary" style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">0 users</span>
                             </li>
-                            <li class="db-list-item">
-                                <span class="db-list-item-lbl">Active Investors</span>
-                                <span class="db-item-primary">5 users</span>
+                            <li class="db-list-item" style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid #1e2538;">
+                                <span class="db-list-item-lbl" style="color: #94a3b8; font-size: 0.85rem;">Active Investors</span>
+                                <span class="db-item-primary" style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">0 users</span>
                             </li>
-                            <li class="db-list-item">
-                                <span class="db-list-item-lbl">Total Commission Earned</span>
-                                <span class="db-item-primary" style="color: #10b981;">$35.00</span>
+                            <li class="db-list-item" style="display: flex; justify-content: space-between;">
+                                <span class="db-list-item-lbl" style="color: #94a3b8; font-size: 0.85rem;">Total Commission Earned</span>
+                                <span class="db-item-primary" style="font-weight: 700; color: #10b981; font-size: 0.85rem;">$0.00</span>
                             </li>
                         </ul>
                     </div>
                     
-                    <div class="recent-deposits-section">
-                        <h3 class="recent-deposits-title">Latest Referral Signups</h3>
-                        <ul class="db-list-box">
-                            <li class="db-list-item">
-                                <div>
-                                    <div class="db-item-primary">Alex Mercer</div>
-                                    <div class="db-item-sec">Joined May 10, 2024</div>
-                                </div>
-                                <span style="font-size: 0.8rem; color: #10b981; font-weight: 600;">+ $5.00</span>
-                            </li>
-                            <li class="db-list-item">
-                                <div>
-                                    <div class="db-item-primary">Sarah Connor</div>
-                                    <div class="db-item-sec">Joined May 8, 2024</div>
-                                </div>
-                                <span style="font-size: 0.8rem; color: #10b981; font-weight: 600;">+ $10.00</span>
-                            </li>
+                    <div class="recent-deposits-section" style="background-color: #111622; border: 1px solid #1e2538; border-radius: 8px; padding: 1.25rem;">
+                        <h3 class="recent-deposits-title font-display" style="font-size: 1.1rem; margin-bottom: 1rem; color: #f8fafc;">Latest Referral Signups</h3>
+                        <ul class="db-list-box" id="db-referral-signups-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem;">
+                            <li style="text-align: center; color: #64748b; font-size: 0.85rem; padding: 1rem 0;">No referred users yet.</li>
                         </ul>
                     </div>
                 </div>
@@ -438,7 +482,18 @@
                     <div class="chat-messages" id="chat-messages-container">
                         <!-- Message bubbles will be rendered dynamically here -->
                     </div>
+                    <div id="chat-image-preview-box" style="display: none; padding: 0.5rem 1rem; border-top: 1px solid #1e2538; background-color: #0b0e14; align-items: center; gap: 0.5rem;">
+                        <img id="chat-image-preview-thumb" src="" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                        <span style="font-size: 0.8rem; color: #94a3b8; flex-grow: 1;">Screenshot attached</span>
+                        <button onclick="clearChatImageSelection()" style="background: none; border: none; color: #ef4444; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">cancel</span>
+                        </button>
+                    </div>
                     <div class="chat-input-area">
+                        <input type="file" id="chat-screenshot-file" accept="image/*" style="display:none;" onchange="handleChatImageSelect(event)">
+                        <button onclick="document.getElementById('chat-screenshot-file').click()" style="background:none; border:none; color:#a855f7; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0 0.5rem;" title="Attach Screenshot">
+                            <span class="material-symbols-outlined" style="font-size:1.4rem;">photo_camera</span>
+                        </button>
                         <input type="text" id="chat-message-input" placeholder="Type your message here..." class="chat-input" onkeydown="if(event.key === 'Enter') sendChatMessage()">
                         <button onclick="sendChatMessage()" class="chat-send-btn" title="Send Message">
                             <span class="material-symbols-outlined">send</span>
@@ -462,6 +517,50 @@
     </div>
 
 
+
+    <!-- MODAL OVERLAY: CHANGE EMAIL (OTP BASED) -->
+    <div id="change-email-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title font-display">Change Email Address</h3>
+                <button class="modal-close-btn" onclick="closeChangeEmailModal()">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div id="change-email-step-1">
+                <p class="modal-subtitle">Enter your current password and new email address to receive an OTP.</p>
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div>
+                        <label class="modal-input-label">Current Password</label>
+                        <input type="password" id="ce-current-password" class="modal-text-input" placeholder="••••••••">
+                    </div>
+                    <div>
+                        <label class="modal-input-label">New Email Address</label>
+                        <input type="email" id="ce-new-email" class="modal-text-input" placeholder="new.email@example.com">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-cancel-btn" onclick="closeChangeEmailModal()">Cancel</button>
+                    <button class="modal-submit-btn" onclick="sendChangeEmailOTP()">Send OTP</button>
+                </div>
+            </div>
+
+            <div id="change-email-step-2" style="display: none;">
+                <p class="modal-subtitle" style="color: #10b981;">OTP sent to your new email! Please check your inbox.</p>
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div>
+                        <label class="modal-input-label">Enter 6-Digit OTP</label>
+                        <input type="text" id="ce-otp-code" class="modal-text-input" placeholder="123456">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-cancel-btn" onclick="closeChangeEmailModal()">Cancel</button>
+                    <button class="modal-submit-btn" onclick="verifyChangeEmailOTP()">Verify & Change Email</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL OVERLAY: CUSTOM DEPOSIT AMOUNT -->
     <div id="custom-amount-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center;">
@@ -504,6 +603,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="app.js?v=1.7"></script>
+    <script src="app.js?v=1.9"></script>
 </body>
 </html>

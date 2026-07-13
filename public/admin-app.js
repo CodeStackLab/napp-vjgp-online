@@ -3,6 +3,7 @@
 const API_BASE = '/api';
 let activeEditUserId = null;
 let activeReplyTicketId = null;
+let globalUsersList = [];
 
 // Format Currency
 function formatUSD(amount) {
@@ -77,10 +78,13 @@ async function fetchActiveTabDetails(tabId) {
         if (tabId === 'overview') {
             const stats = await adminRequest('/admin/overview');
             document.getElementById('stat-users').textContent = stats.users;
+            const activeUsersEl = document.getElementById('stat-active-users');
+            if (activeUsersEl) activeUsersEl.textContent = stats.activeUsers || 0;
             document.getElementById('stat-deposits').textContent = formatUSD(stats.deposits);
             document.getElementById('stat-payouts').textContent = stats.pendingWithdrawals;
         } else if (tabId === 'users') {
             const users = await adminRequest('/admin/users');
+            globalUsersList = users;
             renderUsersTable(users);
         } else if (tabId === 'deposits') {
             const deposits = await adminRequest('/admin/deposits');
@@ -231,7 +235,6 @@ function renderUsersTable(serverUsers) {
         // Escape quotes
         const safeName = (displayUser.name || '').replace(/'/g, "\\'");
         const safeEmail = (displayUser.email || '').replace(/'/g, "\\'");
-        const safeRole = (displayUser.role || 'user').replace(/'/g, "\\'");
         const safeStatus = status.replace(/'/g, "\\'");
 
         return `
@@ -248,11 +251,11 @@ function renderUsersTable(serverUsers) {
                 </div>
             </td>
             <td style="font-weight:700; color:#10b981;">${formatUSD(displayUser.balance)}</td>
-            <td><span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color: ${displayUser.role === 'admin' ? '#fbbf24' : '#94a3b8'};">${displayUser.role}</span></td>
             <td><span style="background-color: ${statusBg}; color: ${statusColor}; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600;">${status}</span></td>
             <td>
                 <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
-                    <button title="Edit Profile/Status" onclick="openEditUserModal(${displayUser.id}, '${safeName}', '${safeEmail}', '${safeRole}', '${safeStatus}')" style="background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 0.35rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 1rem;">edit</span></button>
+                    <button title="View Referred Members" onclick="viewReferredMembers(${displayUser.id}, '${safeName}', '${displayUser.referral_code || ''}')" style="background-color: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); padding: 0.35rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 1rem;">group</span></button>
+                    <button title="Edit Profile/Status" onclick="openEditUserModal(${displayUser.id}, '${safeName}', '${safeEmail}', '${safeStatus}')" style="background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 0.35rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 1rem;">edit</span></button>
                     <button title="Edit Balance" onclick="openEditBalanceModal(${displayUser.id}, '${safeName}', ${displayUser.balance})" style="background-color: #1e2538; border: 1px solid #2e384e; color: #f1f5f9; padding: 0.35rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 1rem;">account_balance_wallet</span></button>
                     <button title="Send Alert/Ticket" onclick="openSendAlertModal(${displayUser.id}, '${safeName}')" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); padding: 0.35rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 1rem;">mark_email_unread</span></button>
                     <button title="Delete User" onclick="adminDeleteUser(${displayUser.id}, '${safeName}')" style="background-color: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.35rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 1rem;">delete</span></button>
@@ -311,7 +314,7 @@ function renderPayoutsTable(payouts) {
     if (!tbody) return;
 
     if (payouts.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b;">No withdrawal requests found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#64748b;">No withdrawal requests found.</td></tr>`;
         return;
     }
 
@@ -323,10 +326,23 @@ function renderPayoutsTable(payouts) {
             `;
         }
 
+        const addressText = po.wallet_address || 'No wallet address';
+        const copyButton = po.wallet_address ? `
+            <button onclick="navigator.clipboard.writeText('${po.wallet_address}'); showToast('Wallet address copied!')" style="background: none; border: none; color: #fbbf24; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; margin-top: 0.25rem; padding: 0;">
+                <span class="material-symbols-outlined" style="font-size: 0.95rem;">content_copy</span> Copy Address
+            </button>
+        ` : '';
+
         return `
             <tr>
                 <td>${po.date}</td>
                 <td style="font-weight:600; color:#f1f5f9;">${po.user_name}</td>
+                <td>
+                    <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0.15rem;">
+                        <span style="font-size:0.8rem; color:#cbd5e1; font-family:monospace; word-break:break-all;">${addressText}</span>
+                        ${copyButton}
+                    </div>
+                </td>
                 <td style="font-weight:700; color:#ef4444;">$${po.amount.toFixed(2)}</td>
                 <td class="deposit-tx-hash" title="${po.ref}">${po.ref.substring(0, 16)}...</td>
                 <td><span class="status-badge-lbl ${po.status.toLowerCase()}">${po.status}</span></td>
@@ -336,34 +352,69 @@ function renderPayoutsTable(payouts) {
     }).join('');
 }
 
+let activeChatUserId = null;
+let activeChatUserTickets = [];
+let allTicketsData = [];
+
 function renderTicketsTable(tickets) {
-    const tbody = document.getElementById('admin-tickets-table-body');
-    if (!tbody) return;
+    allTicketsData = tickets;
+    const usersListContainer = document.getElementById('admin-chat-users-list');
+    if (!usersListContainer) return;
 
     if (tickets.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b;">No support tickets logged.</td></tr>`;
+        usersListContainer.innerHTML = `<p style="text-align: center; color: #64748b; font-size: 0.85rem; padding: 1.5rem 0;">No active threads found.</p>`;
         return;
     }
 
-    tbody.innerHTML = tickets.map(ticket => {
-        let actionCell = `<span style="color:#64748b; font-size:0.8rem;">Resolved</span>`;
-        if (ticket.status === 'Pending') {
-            actionCell = `
-                <button onclick="openReplyBox(${ticket.id}, '${ticket.ticket_id}', '${ticket.message}')" style="background-color:#3b82f6; color:white; padding:0.35rem 0.75rem; border-radius:6px; font-size:0.75rem; font-weight:600;">Reply</button>
-            `;
+    // Group tickets by user_id
+    const userGroups = {};
+    tickets.forEach(t => {
+        if (!userGroups[t.user_id]) {
+            userGroups[t.user_id] = {
+                userId: t.user_id,
+                userName: t.user_name || 'Anonymous User',
+                userEmail: t.user_email || 'no-email@nova.com',
+                tickets: [],
+                latestDate: new Date(t.date).getTime() || 0,
+                status: 'Closed'
+            };
         }
+        userGroups[t.user_id].tickets.push(t);
+        // Thread is open if any message is Open
+        if (t.status === 'Open') {
+            userGroups[t.user_id].status = 'Open';
+        }
+    });
+
+    const groupsArray = Object.values(userGroups).sort((a, b) => b.latestDate - a.latestDate);
+
+    usersListContainer.innerHTML = groupsArray.map(g => {
+        const isCurrent = activeChatUserId === g.userId;
+        const statusColor = g.status === 'Open' ? '#10b981' : '#64748b';
+        const badgeBg = g.status === 'Open' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)';
+        const safeName = g.userName.replace(/'/g, "\\'");
+        const safeEmail = g.userEmail.replace(/'/g, "\\'");
 
         return `
-            <tr>
-                <td>${ticket.date}</td>
-                <td style="font-weight:600; color:#f1f5f9;">${ticket.user_name}</td>
-                <td>${ticket.ticket_id}</td>
-                <td style="font-weight:600; color:#cbd5e1;">${ticket.title}</td>
-                <td><span class="status-badge-lbl ${ticket.status === 'Resolved' ? 'confirmed' : 'pending'}">${ticket.status}</span></td>
-                <td>${actionCell}</td>
-            </tr>
+            <div onclick="selectAdminChatUser(${g.userId}, '${safeName}', '${safeEmail}')" style="padding: 1rem; border-bottom: 1px solid #1e2538; cursor: pointer; transition: background 0.2s; background-color: ${isCurrent ? '#0b0e14' : 'transparent'}; display: flex; flex-direction: column; gap: 0.35rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">${g.userName}</span>
+                    <span style="background-color: ${badgeBg}; color: ${statusColor}; border: 1px solid rgba(16,185,129,0.1); padding: 0.15rem 0.5rem; border-radius: 99px; font-size: 0.65rem; font-weight: 700;">${g.status}</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #94a3b8; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                    ${g.userEmail}
+                </div>
+            </div>
         `;
     }).join('');
+
+    // If there is an active selected chat user, refresh their chat box too!
+    if (activeChatUserId !== null) {
+        const activeGroup = userGroups[activeChatUserId];
+        if (activeGroup) {
+            selectAdminChatUser(activeChatUserId, activeGroup.userName, activeGroup.userEmail, false);
+        }
+    }
 }
 
 // Edit balance Modal handlers
@@ -458,46 +509,181 @@ async function verifyPayout(transactionId) {
     }
 }
 
-// Ticket Reply Panel handlers
-function openReplyBox(ticketId, ticketRef, message) {
-    activeReplyTicketId = ticketId;
-    document.getElementById('reply-ticket-header').textContent = `Reply to Ticket ${ticketRef}`;
-    document.getElementById('reply-ticket-user-msg').textContent = message;
-    document.getElementById('reply-ticket-text').value = '';
-    document.getElementById('admin-reply-box-container').style.display = 'block';
-    
-    // Scroll to reply container
-    document.getElementById('admin-reply-box-container').scrollIntoView({ behavior: 'smooth' });
+// Ticket Reply Panel handlers (RE-DESIGNED FOR LIVE CHAT)
+let selectedAdminChatImageBase64 = null;
+
+function handleAdminChatImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        selectedAdminChatImageBase64 = e.target.result;
+        document.getElementById('admin-chat-image-preview-thumb').src = selectedAdminChatImageBase64;
+        document.getElementById('admin-chat-image-preview-box').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
 }
 
-function closeAdminReplyBox() {
-    document.getElementById('admin-reply-box-container').style.display = 'none';
-    activeReplyTicketId = null;
+function clearAdminChatImageSelection() {
+    selectedAdminChatImageBase64 = null;
+    document.getElementById('admin-chat-screenshot-file').value = '';
+    document.getElementById('admin-chat-image-preview-box').style.display = 'none';
 }
 
-async function submitAdminTicketReply() {
-    const textInput = document.getElementById('reply-ticket-text');
-    const replyMsg = textInput.value.trim();
+function selectAdminChatUser(userId, userName, userEmail, shouldScroll = true) {
+    activeChatUserId = userId;
 
-    if (activeReplyTicketId === null || replyMsg === '') {
-        alert('Please enter a reply message');
+    document.getElementById('admin-chat-user-name').textContent = userName;
+    document.getElementById('admin-chat-user-email').textContent = userEmail;
+
+    // Show input and toggle containers
+    document.getElementById('admin-chat-input-box').style.display = 'flex';
+    document.getElementById('admin-chat-status-toggle-container').style.display = 'flex';
+
+    // Filter tickets for this user
+    const userTickets = allTicketsData.filter(t => t.user_id === userId);
+    // Sort oldest first (chronological order)
+    const sorted = [...userTickets].reverse();
+
+    const messagesContainer = document.getElementById('admin-chat-messages-container');
+    if (!messagesContainer) return;
+
+    if (sorted.length === 0) {
+        messagesContainer.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#64748b;">
+                <p>No messages in this chat yet.</p>
+            </div>
+        `;
+        document.getElementById('admin-chat-thread-status').textContent = 'Open';
+        document.getElementById('admin-chat-thread-status').className = 'status-badge-lbl confirmed';
         return;
     }
 
+    // Determine latest status
+    const latestTicket = sorted[sorted.length - 1];
+    const currentStatus = latestTicket.status;
+    const statusLabel = document.getElementById('admin-chat-thread-status');
+    statusLabel.textContent = currentStatus;
+    if (currentStatus === 'Open') {
+        statusLabel.className = 'status-badge-lbl confirmed';
+    } else {
+        statusLabel.className = 'status-badge-lbl pending';
+    }
+
+    messagesContainer.innerHTML = sorted.map(ticket => {
+        let userImageHtml = '';
+        if (ticket.image_path) {
+            userImageHtml = `<img src="${ticket.image_path}" style="max-width: 100%; border-radius: 8px; margin-top: 0.5rem; display: block; cursor: pointer;" onclick="window.open('${ticket.image_path}', '_blank')">`;
+        }
+
+        let html = '';
+        if (ticket.message) {
+            html += `
+                <div class="chat-bubble-wrapper user" style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem; width: 100%;">
+                    <div class="chat-bubble" style="max-width: 70%; padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; word-break: break-word; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border-bottom-right-radius: 2px;">
+                        ${escapeHTML(ticket.message)}
+                        ${userImageHtml}
+                        <span style="font-size: 0.65rem; color: rgba(255, 255, 255, 0.7); margin-top: 0.25rem; display: block; text-align: right;">${ticket.date}</span>
+                    </div>
+                </div>
+            `;
+        } else if (userImageHtml) {
+            html += `
+                <div class="chat-bubble-wrapper user" style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem; width: 100%;">
+                    <div class="chat-bubble" style="max-width: 70%; padding: 0.5rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; word-break: break-word; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border-bottom-right-radius: 2px;">
+                        ${userImageHtml}
+                        <span style="font-size: 0.65rem; color: rgba(255, 255, 255, 0.7); margin-top: 0.25rem; display: block; text-align: right;">${ticket.date}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        let adminImageHtml = '';
+        if (ticket.admin_image_path) {
+            adminImageHtml = `<img src="${ticket.admin_image_path}" style="max-width: 100%; border-radius: 8px; margin-top: 0.5rem; display: block; cursor: pointer;" onclick="window.open('${ticket.admin_image_path}', '_blank')">`;
+        }
+
+        if (ticket.admin_reply) {
+            html += `
+                <div class="chat-bubble-wrapper support" style="display: flex; justify-content: flex-start; margin-bottom: 0.5rem; width: 100%;">
+                    <div class="chat-bubble" style="max-width: 70%; padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; word-break: break-word; background-color: #171d2c; color: #cbd5e1; border-bottom-left-radius: 2px; border: 1px solid #1e2538;">
+                        ${escapeHTML(ticket.admin_reply)}
+                        ${adminImageHtml}
+                        <span style="font-size: 0.65rem; color: #94a3b8; margin-top: 0.25rem; display: block;">${ticket.date}</span>
+                    </div>
+                </div>
+            `;
+        } else if (adminImageHtml) {
+            html += `
+                <div class="chat-bubble-wrapper support" style="display: flex; justify-content: flex-start; margin-bottom: 0.5rem; width: 100%;">
+                    <div class="chat-bubble" style="max-width: 70%; padding: 0.5rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; word-break: break-word; background-color: #171d2c; color: #cbd5e1; border-bottom-left-radius: 2px; border: 1px solid #1e2538;">
+                        ${adminImageHtml}
+                        <span style="font-size: 0.65rem; color: #94a3b8; margin-top: 0.25rem; display: block;">${ticket.date}</span>
+                    </div>
+                </div>
+            `;
+        }
+        return html;
+    }).join('');
+
+    if (shouldScroll) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}
+
+// HTML Escape Helper
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+async function sendAdminChatMessage() {
+    const input = document.getElementById('admin-chat-message-input');
+    if (!input || activeChatUserId === null) return;
+    const msg = input.value.trim();
+    if (msg === '' && !selectedAdminChatImageBase64) return;
+
     try {
+        input.disabled = true;
         await adminRequest('/admin/tickets/reply', {
             method: 'POST',
             body: JSON.stringify({
-                ticketId: activeReplyTicketId,
-                reply: replyMsg
+                userId: activeChatUserId,
+                reply: msg,
+                screenshotBase64: selectedAdminChatImageBase64
             })
         });
 
-        showToast('Reply submitted and ticket resolved.');
-        closeAdminReplyBox();
-        await fetchActiveTabDetails('tickets');
+        input.value = '';
+        clearAdminChatImageSelection();
+        const tickets = await adminRequest('/admin/tickets');
+        renderTicketsTable(tickets);
     } catch (e) {
-        alert(e.message || 'Failed to submit reply');
+        alert(e.message || 'Failed to send message');
+    } finally {
+        input.disabled = false;
+        input.focus();
+    }
+}
+
+async function toggleCurrentThreadStatus() {
+    if (activeChatUserId === null) return;
+    const currentStatus = document.getElementById('admin-chat-thread-status').textContent;
+    const nextStatus = currentStatus === 'Open' ? 'Closed' : 'Open';
+
+    try {
+        await adminRequest('/admin/tickets/toggle-status', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: activeChatUserId,
+                status: nextStatus
+            })
+        });
+        showToast(`Thread status set to ${nextStatus}`);
+        const tickets = await adminRequest('/admin/tickets');
+        renderTicketsTable(tickets);
+    } catch (e) {
+        alert(e.message || 'Failed to toggle status');
     }
 }
 
@@ -529,18 +715,24 @@ function renderAdminPlans() {
         if (plan.category === 'Movies') { catBg = 'rgba(168,85,247,0.15)'; catColor = '#c084fc'; }
         if (plan.category === 'Gift Cards') { catBg = 'rgba(16,185,129,0.15)'; catColor = '#10b981'; }
         
+        const planImg = plan.img || (plan.category === 'Movies' ? 'images/avengers_theme.png' : (plan.category === 'Gift Cards' ? 'images/netflix_card.png' : 'images/amc_theater.png'));
         const safeName = plan.name.replace(/'/g, "\\'");
         const safeRoi = (plan.roi || '2.5% Flat').replace(/'/g, "\\'");
-        
+
         return `
             <tr>
                 <td><span style="background-color: ${catBg}; color: ${catColor}; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.75rem;">${plan.category}</span></td>
-                <td style="font-weight: 700; color: #f8fafc;">${plan.name}</td>
+                <td style="font-weight: 700; color: #f8fafc;">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <img src="${planImg}" alt="Poster" style="width:36px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #1e2538; background-color:#0b0e14;">
+                        <span>${plan.name}</span>
+                    </div>
+                </td>
                 <td style="font-weight: 700; color: #10b981;">$${Number(plan.price).toFixed(2)}</td>
                 <td>${plan.roi || '2.5% Flat'}</td>
                 <td>${plan.duration || '24 Hours'}</td>
                 <td style="white-space: nowrap;">
-                    <button onclick="openEditPlanModal('${safeName}', '${plan.category}', ${plan.price}, '${safeRoi}')" style="background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin-right: 0.4rem;">Edit</button>
+                    <button onclick="openEditPlanModal('${safeName}', '${plan.category}', ${plan.price}, '${safeRoi}', '${planImg}')" style="background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin-right: 0.4rem;">Edit</button>
                     <button onclick="adminDeletePlan('${safeName}')" style="background-color: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">Delete</button>
                 </td>
             </tr>
@@ -548,18 +740,61 @@ function renderAdminPlans() {
     }).join('');
 }
 
-function openEditPlanModal(name, category, price, roi) {
+// Plan image upload handler (shared between create + edit forms)
+let _createPlanImageBase64 = null;
+let _editPlanImageBase64 = null;
+
+function handlePlanImageSelect(event, formType) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        if (formType === 'create') {
+            _createPlanImageBase64 = dataUrl;
+            document.getElementById('create-plan-img-preview').src = dataUrl;
+            document.getElementById('create-plan-img-preview-wrap').style.display = 'block';
+            document.getElementById('admin-plan-image-url').value = '';
+        } else {
+            _editPlanImageBase64 = dataUrl;
+            document.getElementById('edit-plan-img-preview').src = dataUrl;
+            document.getElementById('edit-plan-img-preview-wrap').style.display = 'block';
+            document.getElementById('edit-plan-image-url').value = '';
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function openEditPlanModal(name, category, price, roi, currentImg) {
     const origInput = document.getElementById('edit-plan-original-name');
     const nameInput = document.getElementById('edit-plan-name');
     const catInput = document.getElementById('edit-plan-category');
     const priceInput = document.getElementById('edit-plan-price');
     const roiInput = document.getElementById('edit-plan-roi');
+    const imgUrlInput = document.getElementById('edit-plan-image-url');
+    const imgPreview = document.getElementById('edit-plan-img-preview');
+    const imgPreviewWrap = document.getElementById('edit-plan-img-preview-wrap');
 
     if (origInput) origInput.value = name;
     if (nameInput) nameInput.value = name;
     if (catInput) catInput.value = category || 'Movie Tickets';
     if (priceInput) priceInput.value = price;
     if (roiInput) roiInput.value = roi || '2.5% Flat';
+    _editPlanImageBase64 = null;
+    document.getElementById('edit-plan-image-file').value = '';
+
+    if (currentImg) {
+        imgUrlInput.value = currentImg.startsWith('data:') ? '' : currentImg;
+        imgPreview.src = currentImg;
+        imgPreviewWrap.style.display = 'block';
+        if (currentImg.startsWith('data:')) {
+            _editPlanImageBase64 = currentImg;
+            imgUrlInput.value = '';
+        }
+    } else {
+        if (imgUrlInput) imgUrlInput.value = '';
+        if (imgPreviewWrap) imgPreviewWrap.style.display = 'none';
+    }
 
     const modal = document.getElementById('edit-plan-modal');
     if (modal) modal.classList.add('active');
@@ -576,6 +811,8 @@ function saveEditPlan() {
     const newCat = document.getElementById('edit-plan-category').value;
     const newPrice = parseFloat(document.getElementById('edit-plan-price').value);
     const newROI = document.getElementById('edit-plan-roi').value.trim() || '2.5% Flat';
+    const imgUrlVal = document.getElementById('edit-plan-image-url').value.trim();
+    const newImg = _editPlanImageBase64 || imgUrlVal || '';
 
     if (!newName || isNaN(newPrice) || newPrice <= 0) {
         alert('Please enter a valid Plan Name and Price.');
@@ -591,6 +828,7 @@ function saveEditPlan() {
             name: newName,
             price: newPrice,
             roi: newROI,
+            img: newImg,
             duration: '24 Hours'
         };
         localStorage.setItem('nova_custom_plans', JSON.stringify(customPlans));
@@ -601,31 +839,36 @@ function saveEditPlan() {
             name: newName,
             price: newPrice,
             roi: newROI,
+            img: newImg,
             duration: '24 Hours'
         };
         localStorage.setItem('nova_edited_plans', JSON.stringify(editedPlans));
     }
 
+    _editPlanImageBase64 = null;
     closeEditPlanModal();
     renderAdminPlans();
     showToast(`Plan updated: ${newName}`);
-    alert(`✅ Plan "${newName}" successfully updated to $${newPrice.toFixed(2)} (${newROI})!`);
 }
 
 function adminCreatePlan() {
     const nameEl = document.getElementById('admin-plan-name');
     const catEl = document.getElementById('admin-plan-category');
     const priceEl = document.getElementById('admin-plan-price');
+    const imgUrlEl = document.getElementById('admin-plan-image-url');
     
     if (!nameEl || !priceEl || !nameEl.value.trim() || !priceEl.value.trim()) {
         alert("Please enter both Plan Name and Price.");
         return;
     }
+
+    const imgVal = _createPlanImageBase64 || (imgUrlEl ? imgUrlEl.value.trim() : '');
     
     const newPlan = {
         category: catEl ? catEl.value : 'Products',
         name: nameEl.value.trim(),
         price: parseFloat(priceEl.value),
+        img: imgVal,
         roi: '2.5% Flat',
         duration: '24 Hours'
     };
@@ -634,12 +877,16 @@ function adminCreatePlan() {
     customPlans.push(newPlan);
     localStorage.setItem('nova_custom_plans', JSON.stringify(customPlans));
     
+    // Reset form
     nameEl.value = '';
     priceEl.value = '';
+    if (imgUrlEl) imgUrlEl.value = '';
+    _createPlanImageBase64 = null;
+    document.getElementById('admin-plan-image-file').value = '';
+    document.getElementById('create-plan-img-preview-wrap').style.display = 'none';
     
     renderAdminPlans();
     showToast(`Created plan: ${newPlan.name} ($${newPlan.price})`);
-    alert(`🎉 Successfully published "${newPlan.name}" ($${newPlan.price}) to frontend!`);
 }
 
 function adminDeletePlan(name) {
@@ -803,4 +1050,120 @@ function sendUserAlert() {
 
     closeSendAlertModal();
     showToast('Alert / Ticket successfully sent to user!');
+}
+
+function viewReferredMembers(userId, name, refCode) {
+    document.getElementById('ref-modal-title').textContent = `Members Referred by ${name}`;
+    const listContainer = document.getElementById('ref-members-list-container');
+    if (!listContainer) return;
+
+    // Filter globalUsersList for users whose referred_by matches this user's ID
+    const referred = globalUsersList.filter(u => u.referred_by === userId);
+    
+    if (referred.length === 0) {
+        listContainer.innerHTML = `<p style="text-align:center; color:#94a3b8; font-size:0.85rem; padding: 1.5rem 0;">No members referred yet (Code: ${refCode || 'N/A'}).</p>`;
+    } else {
+        listContainer.innerHTML = referred.map(u => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0.5rem; border-bottom:1px solid #1e2538;">
+                <div>
+                    <div style="font-weight:600; color:#f8fafc; font-size:0.85rem;">${u.name}</div>
+                    <div style="font-size:0.75rem; color:#94a3b8;">${u.email}</div>
+                </div>
+                <div style="font-size:0.75rem; background-color:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); padding:0.2rem 0.5rem; border-radius:4px;">
+                    Balance: ${formatUSD(u.balance)}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('referred-members-modal').classList.add('active');
+}
+
+function closeReferredMembersModal() {
+    document.getElementById('referred-members-modal').classList.remove('active');
+}
+
+// Admin Change Email Flow (OTP)
+function openAdminChangeEmailModal() {
+    const adminDropdown = document.getElementById('admin-dropdown-menu');
+    if (adminDropdown) adminDropdown.classList.remove('show');
+
+    const modal = document.getElementById('admin-change-email-modal');
+    if (modal) {
+        modal.classList.add('active');
+        document.getElementById('admin-email-step-1').style.display = 'block';
+        document.getElementById('admin-email-step-2').style.display = 'none';
+        document.getElementById('admin-change-email-password').value = '';
+        document.getElementById('admin-change-email-new').value = '';
+        document.getElementById('admin-change-email-otp').value = '';
+    }
+}
+
+function closeAdminChangeEmailModal() {
+    const modal = document.getElementById('admin-change-email-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+async function adminSendChangeEmailOtp() {
+    const password = document.getElementById('admin-change-email-password').value;
+    const newEmail = document.getElementById('admin-change-email-new').value;
+
+    if (!password || !newEmail) {
+        showToast('Please enter password and new email');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('nova_token');
+        const response = await fetch('/api/user/change-email/send-otp', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ password, newEmail })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Failed to send OTP');
+
+        document.getElementById('admin-email-step-1').style.display = 'none';
+        document.getElementById('admin-email-step-2').style.display = 'block';
+        showToast('OTP sent to new email!');
+    } catch (err) {
+        showToast(err.message);
+    }
+}
+
+async function adminVerifyChangeEmailOtp() {
+    const newEmail = document.getElementById('admin-change-email-new').value;
+    const otpCode = document.getElementById('admin-change-email-otp').value;
+
+    if (!otpCode) {
+        showToast('Please enter OTP');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('nova_token');
+        const response = await fetch('/api/user/change-email/verify', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ newEmail, otpCode })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Verification failed');
+
+        showToast('Email changed successfully!');
+        closeAdminChangeEmailModal();
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+    } catch (err) {
+        showToast(err.message);
+    }
 }

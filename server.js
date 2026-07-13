@@ -40,6 +40,10 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
+// OTP in-memory stores
+const forgotOtpStore = new Map();
+const changeEmailOtpStore = new Map();
+
 // Helper database functions to use Promises
 function dbRun(sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -167,9 +171,17 @@ async function initializeDatabase() {
                 amount REAL NOT NULL,
                 ref TEXT UNIQUE NOT NULL,
                 status TEXT NOT NULL,
+                wallet_address TEXT,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         `);
+
+        // Ensure wallet_address column exists in transactions
+        try {
+            await dbRun('ALTER TABLE transactions ADD COLUMN wallet_address TEXT');
+        } catch (e) {
+            // Ignore if column already exists
+        }
 
         // 5. Create Tickets Table
         await dbRun(`
@@ -182,9 +194,32 @@ async function initializeDatabase() {
                 status TEXT NOT NULL,
                 message TEXT NOT NULL,
                 admin_reply TEXT DEFAULT NULL,
+                image_path TEXT,
+                admin_image_path TEXT,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         `);
+
+        // Ensure image_path and admin_image_path columns exist in tickets
+        try {
+            await dbRun('ALTER TABLE tickets ADD COLUMN image_path TEXT');
+        } catch (e) {}
+        try {
+            await dbRun('ALTER TABLE tickets ADD COLUMN admin_image_path TEXT');
+        } catch (e) {}
+
+        // 6. Create Settings Table
+        await dbRun(`
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+        `);
+        // Seed default TRON deposit address if not set
+        const existingAddr = await dbGet("SELECT value FROM settings WHERE key = 'tron_deposit_address'");
+        if (!existingAddr) {
+            await dbRun("INSERT INTO settings (key, value) VALUES ('tron_deposit_address', 'TQdJg7h5P6r8xkLyGk9Y8yq8eL5t3mZ6tX')");
+        }
 
         console.log('SQLite tables initialized successfully.');
 
@@ -440,11 +475,34 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
 });
 
 // 4. Forgot Password API (Unified public mock/interactive endpoint)
-app.post('/api/auth/forgot-password', async (req, res) => {
-    const { email, newPassword } = req.body;
+app.post('/api/auth/forgot-password/send-otp', async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+    }
+    try {
+        const user = await dbGet('SELECT id FROM users WHERE email = ?', [email]);
+        if (!user) {
+            return res.status(404).json({ message: 'Email address not found' });
+        }
+        
+        // Generate a 6-digit random code
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        forgotOtpStore.set(email.toLowerCase(), { otpCode, expiresAt: Date.now() + 10 * 60 * 1000 }); // 10 minutes expiry
 
-    if (!email || !newPassword) {
-        return res.status(400).json({ message: 'Email and new password are required' });
+        console.log(`[FORGOT PASSWORD OTP] Email: ${email}, OTP Code: ${otpCode}`);
+
+        res.json({ message: 'OTP sent successfully! Please check the console.' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Server sending OTP error' });
+    }
+});
+
+app.post('/api/auth/forgot-password/reset', async (req, res) => {
+    const { email, otpCode, newPassword } = req.body;
+    if (!email || !otpCode || !newPassword) {
+        return res.status(400).json({ message: 'Email, OTP code, and new password are required' });
     }
 
     try {
@@ -453,11 +511,29 @@ app.post('/api/auth/forgot-password', async (req, res) => {
             return res.status(404).json({ message: 'Email address not found' });
         }
 
+        const stored = forgotOtpStore.get(email.toLowerCase());
+        if (!stored) {
+            return res.status(400).json({ message: 'No OTP requested or expired' });
+        }
+
+        if (stored.expiresAt < Date.now()) {
+            forgotOtpStore.delete(email.toLowerCase());
+            return res.status(400).json({ message: 'OTP has expired' });
+        }
+
+        if (stored.otpCode !== otpCode.trim()) {
+            return res.status(400).json({ message: 'Invalid OTP code' });
+        }
+
+        // OTP is valid! Clear it.
+        forgotOtpStore.delete(email.toLowerCase());
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, user.id]);
 
         res.json({ message: 'Password reset successfully! You can now log in.' });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ message: 'Server reset error' });
     }
 });
@@ -475,6 +551,78 @@ app.post('/api/user/password', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Password update error:', error);
         res.status(500).json({ message: 'Server error updating password' });
+    }
+});
+
+// Change User Email with OTP API
+app.post('/api/user/change-email/send-otp', authenticateToken, async (req, res) => {
+    const { password, newEmail } = req.body;
+    if (!password || !newEmail) {
+        return res.status(400).json({ message: 'Current password and new email are required' });
+    }
+
+    try {
+        const user = await dbGet('SELECT password, email FROM users WHERE id = ?', [req.userId]);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            return res.status(400).json({ message: 'Incorrect password' });
+        }
+
+        // Check if new email is already in use
+        const inUse = await dbGet('SELECT id FROM users WHERE email = ? AND id != ?', [newEmail, req.userId]);
+        if (inUse) {
+            return res.status(400).json({ message: 'New email address is already in use' });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        changeEmailOtpStore.set(req.userId, { newEmail, otpCode, expiresAt: Date.now() + 10 * 60 * 1000 });
+
+        console.log(`[CHANGE EMAIL OTP] User ID: ${req.userId}, New Email: ${newEmail}, OTP Code: ${otpCode}`);
+
+        res.json({ message: 'OTP sent to your new email! Please check the console.' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Server sending email OTP error' });
+    }
+});
+
+app.post('/api/user/change-email/verify', authenticateToken, async (req, res) => {
+    const { newEmail, otpCode } = req.body;
+    if (!newEmail || !otpCode) {
+        return res.status(400).json({ message: 'New email and OTP code are required' });
+    }
+
+    try {
+        const stored = changeEmailOtpStore.get(req.userId);
+        if (!stored) {
+            return res.status(400).json({ message: 'No OTP requested or expired' });
+        }
+
+        if (stored.expiresAt < Date.now()) {
+            changeEmailOtpStore.delete(req.userId);
+            return res.status(400).json({ message: 'OTP has expired' });
+        }
+
+        if (stored.newEmail.toLowerCase() !== newEmail.toLowerCase()) {
+            return res.status(400).json({ message: 'Email mismatch' });
+        }
+
+        if (stored.otpCode !== otpCode.trim()) {
+            return res.status(400).json({ message: 'Invalid OTP code' });
+        }
+
+        // Code is correct! Update email and username in DB
+        await dbRun('UPDATE users SET email = ?, username = ? WHERE id = ?', [newEmail, newEmail, req.userId]);
+        changeEmailOtpStore.delete(req.userId);
+
+        res.json({ message: 'Email address updated successfully!' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Server email verification error' });
     }
 });
 
@@ -504,11 +652,21 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
         const comSumRow = await dbGet("SELECT SUM(amount) as comSum FROM transactions WHERE user_id = ? AND type = 'Referral Bonus'", [req.userId]);
         const totalComEarned = comSumRow.comSum || 0.00;
 
+        const refActiveSumRow = await dbGet(`
+            SELECT SUM(amount) as refActiveSum 
+            FROM investments 
+            JOIN users ON investments.user_id = users.id 
+            WHERE users.referred_by = ? AND investments.status = 'Active'
+        `, [req.userId]);
+        const refActiveTotal = refActiveSumRow.refActiveSum || 0.00;
+        const todayProfit = (activeTotal * 0.025) + (refActiveTotal * 0.0025);
+
         const signupsRows = await dbAll('SELECT id, name, email FROM users WHERE referred_by = ? ORDER BY id DESC LIMIT 5', [req.userId]);
 
         res.json({
             ...user,
             active_investments: activeTotal,
+            today_profit: todayProfit,
             referralsStats: {
                 totalReferrals,
                 activeReferralsCount,
@@ -660,13 +818,13 @@ app.get('/api/transactions', authenticateToken, async (req, res) => {
     }
 });
 
-// 11. Payout Withdrawal (min $100)
+// 11. Payout Withdrawal (min $20, 2% fee)
 app.post('/api/withdrawals', authenticateToken, async (req, res) => {
     const { address, amount } = req.body;
     const withdrawAmt = parseFloat(amount);
 
-    if (!address || isNaN(withdrawAmt) || withdrawAmt < 100) {
-        return res.status(400).json({ message: 'Valid address and amount (minimum $100) are required' });
+    if (!address || isNaN(withdrawAmt) || withdrawAmt < 20) {
+        return res.status(400).json({ message: 'Valid address and amount (minimum $20) are required' });
     }
 
     try {
@@ -685,16 +843,19 @@ app.post('/api/withdrawals', authenticateToken, async (req, res) => {
         });
 
         const randomRef = "WD" + Math.random().toString(36).substring(2, 10).toUpperCase();
+        const fee = withdrawAmt * 0.02;
+        const netPayout = withdrawAmt - fee;
 
         await dbRun('UPDATE users SET balance = balance - ? WHERE id = ?', [withdrawAmt, req.userId]);
 
         await dbRun(
-            'INSERT INTO transactions (user_id, date, type, amount, ref, status) VALUES (?, ?, ?, ?, ?, ?)',
-            [req.userId, dateStr, 'Withdrawal', withdrawAmt, randomRef, 'Pending']
+            'INSERT INTO transactions (user_id, date, type, amount, ref, status, wallet_address) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [req.userId, dateStr, 'Withdrawal', withdrawAmt, randomRef, 'Pending', address]
         );
 
-        res.json({ message: 'Withdrawal request submitted successfully.' });
+        res.json({ message: `Withdrawal request for $${withdrawAmt.toFixed(2)} submitted. A 2% fee ($${fee.toFixed(2)}) applies. Net payout will be $${netPayout.toFixed(2)}.` });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -711,27 +872,52 @@ app.get('/api/tickets', authenticateToken, async (req, res) => {
 
 // 13. Submit Support Ticket
 app.post('/api/tickets', authenticateToken, async (req, res) => {
-    const { title, message } = req.body;
+    const { title, message, screenshotBase64 } = req.body;
 
-    if (!title || !message) {
-        return res.status(400).json({ message: 'Subject and message are required' });
+    if (!message) {
+        return res.status(400).json({ message: 'Message is required' });
+    }
+
+    let savedImagePath = null;
+    if (screenshotBase64) {
+        try {
+            const matches = screenshotBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (matches) {
+                const type = matches[1];
+                const buffer = Buffer.from(matches[2], 'base64');
+                const ext = type.split('/')[1] || 'png';
+                const fileName = `support_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                const fullSavePath = path.join(uploadsDir, fileName);
+                fs.writeFileSync(fullSavePath, buffer);
+                savedImagePath = `/uploads/${fileName}`;
+            }
+        } catch (err) {
+            console.error("Base64 support image save error:", err);
+        }
     }
 
     const dateStr = new Date().toLocaleString('en-US', { 
         month: 'short', 
         day: 'numeric', 
-        year: 'numeric'
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
     });
 
     const ticketId = "#" + Math.floor(10000 + Math.random() * 90000);
 
     try {
+        // Set all user's previous tickets to Open since they are sending a new message
+        await dbRun('UPDATE tickets SET status = ? WHERE user_id = ?', ['Open', req.userId]);
+
         await dbRun(
-            'INSERT INTO tickets (user_id, title, ticket_id, date, status, message) VALUES (?, ?, ?, ?, ?, ?)',
-            [req.userId, title, ticketId, dateStr, 'Pending', message]
+            'INSERT INTO tickets (user_id, title, ticket_id, date, status, message, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [req.userId, title || 'Support Query', ticketId, dateStr, 'Open', message, savedImagePath]
         );
         res.json({ message: 'Support ticket submitted.' });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -748,12 +934,14 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
         const totalDeposits = await dbGet('SELECT SUM(amount) as dSum FROM deposits WHERE status = ?', ['Confirmed']);
         const pendingWithdrawals = await dbGet('SELECT COUNT(*) as wCount FROM transactions WHERE type = ? AND status = ?', ['Withdrawal', 'Pending']);
         const activeInvestmentsSum = await dbGet('SELECT SUM(amount) as iSum FROM investments WHERE status = ?', ['Active']);
+        const activeUsersCount = await dbGet("SELECT COUNT(DISTINCT user_id) as activeUsers FROM investments WHERE status = 'Active'");
 
         res.json({
             users: totalUsers.uCount || 0,
             deposits: totalDeposits.dSum || 0.0,
             pendingWithdrawals: pendingWithdrawals.wCount || 0,
-            activeInvestments: activeInvestmentsSum.iSum || 0.0
+            activeInvestments: activeInvestmentsSum.iSum || 0.0,
+            activeUsers: activeUsersCount.activeUsers || 0
         });
     } catch (e) {
         res.status(500).json({ message: 'Server admin overview query error' });
@@ -934,22 +1122,67 @@ app.get('/api/admin/tickets', authenticateToken, requireAdmin, async (req, res) 
 
 // 9. Reply Support Ticket
 app.post('/api/admin/tickets/reply', authenticateToken, requireAdmin, async (req, res) => {
-    const { ticketId, reply } = req.body;
+    const { userId, reply, screenshotBase64 } = req.body;
 
-    if (!ticketId || !reply) {
-        return res.status(400).json({ message: 'Valid ticket ID and reply message are required' });
+    if (!userId || (!reply && !screenshotBase64)) {
+        return res.status(400).json({ message: 'User ID and reply message or image are required' });
+    }
+
+    let savedImagePath = null;
+    if (screenshotBase64) {
+        try {
+            const matches = screenshotBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (matches) {
+                const type = matches[1];
+                const buffer = Buffer.from(matches[2], 'base64');
+                const ext = type.split('/')[1] || 'png';
+                const fileName = `support_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                const fullSavePath = path.join(uploadsDir, fileName);
+                fs.writeFileSync(fullSavePath, buffer);
+                savedImagePath = `/uploads/${fileName}`;
+            }
+        } catch (err) {
+            console.error("Base64 admin support image save error:", err);
+        }
+    }
+
+    const dateStr = new Date().toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+
+    const ticketId = "#" + Math.floor(10000 + Math.random() * 90000);
+
+    try {
+        await dbRun(
+            'INSERT INTO tickets (user_id, title, ticket_id, date, status, message, admin_reply, admin_image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [userId, 'Support Reply', ticketId, dateStr, 'Open', '', reply || '', savedImagePath]
+        );
+        res.json({ message: 'Reply sent successfully.' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Server admin ticket reply error' });
+    }
+});
+
+// 9b. Toggle Support Thread Status
+app.post('/api/admin/tickets/toggle-status', authenticateToken, requireAdmin, async (req, res) => {
+    const { userId, status } = req.body; // status can be 'Open' or 'Closed'
+
+    if (!userId || !status) {
+        return res.status(400).json({ message: 'User ID and status are required' });
     }
 
     try {
-        const ticket = await dbGet('SELECT * FROM tickets WHERE id = ?', [ticketId]);
-        if (!ticket) {
-            return res.status(404).json({ message: 'Ticket record not found' });
-        }
-
-        await dbRun('UPDATE tickets SET admin_reply = ?, status = ? WHERE id = ?', [reply, 'Resolved', ticketId]);
-        res.json({ message: 'Reply sent and ticket resolved.' });
+        await dbRun('UPDATE tickets SET status = ? WHERE user_id = ?', [status, userId]);
+        res.json({ message: `Support thread status set to ${status}.` });
     } catch (e) {
-        res.status(500).json({ message: 'Server admin ticket reply error' });
+        console.error(e);
+        res.status(500).json({ message: 'Server status toggle error' });
     }
 });
 

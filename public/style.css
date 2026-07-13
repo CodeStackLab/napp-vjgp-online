@@ -940,12 +940,17 @@ input {
     background: none;
     color: #94a3b8;
     font-size: 1.4rem;
+    display: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
 }
 
 .header-right-user {
     display: flex;
     align-items: center;
     gap: 1.5rem;
+    margin-left: auto;
 }
 
 .user-card-info {

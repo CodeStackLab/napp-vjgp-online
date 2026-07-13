@@ -67,14 +67,8 @@ async function handleLoginSubmit(event) {
 
 function logout() {
     localStorage.removeItem('nova_token');
-    const authApp = document.getElementById('authenticated-app');
-    const loginCont = document.getElementById('login-container');
-    if (authApp && loginCont) {
-        authApp.style.display = 'none';
-        loginCont.style.display = 'flex';
-    } else {
-        window.location.href = '/login';
-    }
+    localStorage.removeItem('nova_role');
+    window.location.href = '/login';
 }
 
 // Switch tabs inside dashboard
@@ -129,11 +123,11 @@ async function fetchAllDashboardData() {
         const dbTotalBalance = document.getElementById('db-total-balance');
         if (dbTotalBalance) dbTotalBalance.textContent = formatUSD(profile.balance);
         
-        const dbTotalEarnings = document.getElementById('db-total-earnings');
-        if (dbTotalEarnings) dbTotalEarnings.textContent = formatUSD(profile.earnings);
+        const dbTodayProfit = document.getElementById('db-today-profit');
+        if (dbTodayProfit) dbTodayProfit.textContent = formatUSD(profile.today_profit || 0.00);
         
-        const dbActiveInvestments = document.getElementById('db-active-investments');
-        if (dbActiveInvestments) dbActiveInvestments.textContent = formatUSD(profile.active_investments);
+        const dbTotalEarned = document.getElementById('db-total-earned');
+        if (dbTotalEarned) dbTotalEarned.textContent = formatUSD(profile.earnings || 0.00);
 
         const dbReferralCode = document.getElementById('db-referral-code');
         if (dbReferralCode && profile.referral_code) {
@@ -146,7 +140,7 @@ async function fetchAllDashboardData() {
         }
 
         if (profile.referralsStats) {
-            const listItems = document.querySelectorAll('#panel-referrals .db-list-box .db-list-item');
+            const listItems = document.querySelectorAll('#panel-referrals .db-grid-half .recent-deposits-section:first-child .db-list-item');
             if (listItems.length >= 3) {
                 const totalRefVal = listItems[0].querySelector('.db-item-primary');
                 if (totalRefVal) totalRefVal.textContent = `${profile.referralsStats.totalReferrals} users`;
@@ -158,16 +152,16 @@ async function fetchAllDashboardData() {
                 if (totalComVal) totalComVal.textContent = formatUSD(profile.referralsStats.totalComEarned);
             }
 
-            const latestSignupsContainer = document.querySelector('#panel-referrals .recent-deposits-section:nth-child(2) .db-list-box');
+            const latestSignupsContainer = document.getElementById('db-referral-signups-list');
             if (latestSignupsContainer && profile.referralsStats.signups) {
                 if (profile.referralsStats.signups.length === 0) {
-                    latestSignupsContainer.innerHTML = '<li class="db-list-item"><span style="color:#64748b; font-size:0.85rem;">No referrals signed up yet.</span></li>';
+                    latestSignupsContainer.innerHTML = '<li style="text-align: center; color: #64748b; font-size: 0.85rem; padding: 1rem 0;">No referred users yet.</li>';
                 } else {
                     latestSignupsContainer.innerHTML = profile.referralsStats.signups.map(s => `
-                        <li class="db-list-item">
+                        <li class="db-list-item" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.5rem; border-bottom: 1px solid #1e2538;">
                             <div>
-                                <div class="db-item-primary">${s.name}</div>
-                                <div class="db-item-sec">${s.email}</div>
+                                <div class="db-item-primary" style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">${s.name}</div>
+                                <div class="db-item-sec" style="color: #94a3b8; font-size: 0.75rem;">${s.email}</div>
                             </div>
                         </li>
                     `).join('');
@@ -181,6 +175,9 @@ async function fetchAllDashboardData() {
 
         const investments = await apiRequest('/investments');
         renderInvestmentsTable(investments);
+        if (typeof renderActiveInvestmentsTracking === 'function') {
+            renderActiveInvestmentsTracking(investments);
+        }
 
         const transactions = await apiRequest('/transactions');
         renderAllTransactionsTable(transactions);
@@ -497,8 +494,8 @@ async function requestWithdrawal() {
         return;
     }
 
-    if (isNaN(amount) || amount < 100) {
-        alert("Minimum withdrawal limit is $100.00.");
+    if (isNaN(amount) || amount < 20) {
+        alert("Minimum withdrawal limit is $20.00.");
         return;
     }
 
@@ -526,12 +523,32 @@ function escapeHTML(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
+let selectedChatImageBase64 = null;
+
+function handleChatImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        selectedChatImageBase64 = e.target.result;
+        document.getElementById('chat-image-preview-thumb').src = selectedChatImageBase64;
+        document.getElementById('chat-image-preview-box').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearChatImageSelection() {
+    selectedChatImageBase64 = null;
+    document.getElementById('chat-screenshot-file').value = '';
+    document.getElementById('chat-image-preview-box').style.display = 'none';
+}
+
 // Send support message in chat panel
 async function sendChatMessage() {
     const input = document.getElementById('chat-message-input');
     if (!input) return;
     const msg = input.value.trim();
-    if (msg === '') return;
+    if (msg === '' && !selectedChatImageBase64) return;
 
     try {
         input.disabled = true;
@@ -542,11 +559,13 @@ async function sendChatMessage() {
             method: 'POST',
             body: JSON.stringify({
                 title: 'Support Query',
-                message: msg
+                message: msg,
+                screenshotBase64: selectedChatImageBase64
             })
         });
 
         input.value = '';
+        clearChatImageSelection();
         await fetchAllDashboardData();
     } catch (e) {
         alert(e.message || 'Failed to send message.');
@@ -593,12 +612,14 @@ function renderAllTransactionsTable(transactions) {
     const tbody = document.getElementById('all-transactions-table-body');
     if (!tbody) return;
 
-    if (transactions.length === 0) {
+    const filtered = transactions.filter(tx => tx.type === 'Deposit' || tx.type === 'Withdrawal');
+
+    if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#64748b;">No transactions logged.</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = transactions.map(tx => {
+    tbody.innerHTML = filtered.map(tx => {
         let typeColor = "#3b82f6";
         if (tx.type === "Investment") typeColor = "#a855f7";
         if (tx.type === "Withdrawal") typeColor = "#ef4444";
@@ -637,6 +658,30 @@ function renderInvestmentsTable(investments) {
     `).join('');
 }
 
+function renderActiveInvestmentsTracking(investments) {
+    const tbody = document.getElementById('active-investments-tbody');
+    if (!tbody) return;
+
+    const active = investments.filter(inv => inv.status === 'Active');
+    if (active.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 1.5rem; color: #94a3b8;">No active investments today. Go to 'Investment Plans' to start.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = active.map(inv => {
+        const estReturns = inv.amount * (inv.daily_profit_pct / 100);
+        return `
+        <tr style="border-bottom: 1px solid #1e2538;">
+            <td style="padding: 1rem 1.25rem; font-weight:600; color:#f8fafc;">${inv.name}</td>
+            <td style="padding: 1rem 1.25rem; font-weight:700; color:#3b82f6;">$${inv.amount.toFixed(2)}</td>
+            <td style="padding: 1rem 1.25rem; color:#10b981; font-weight:600;">+${inv.daily_profit_pct}% / day</td>
+            <td style="padding: 1rem 1.25rem; color:#10b981; font-weight:700;">+$${estReturns.toFixed(2)}</td>
+            <td style="padding: 1rem 1.25rem;"><span style="background-color: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600;">${inv.status}</span></td>
+        </tr>
+        `;
+    }).join('');
+}
+
 function renderTicketsTable(tickets) {
     const container = document.getElementById('chat-messages-container');
     if (!container) return;
@@ -655,19 +700,53 @@ function renderTicketsTable(tickets) {
     const sortedTickets = [...tickets].reverse();
 
     container.innerHTML = sortedTickets.map(ticket => {
-        let html = `
-            <div class="chat-bubble-wrapper user">
-                <div class="chat-bubble">
-                    ${escapeHTML(ticket.message)}
-                    <span class="chat-bubble-time">${ticket.date}</span>
+        let userImageHtml = '';
+        if (ticket.image_path) {
+            userImageHtml = `<img src="${ticket.image_path}" style="max-width: 100%; border-radius: 8px; margin-top: 0.5rem; display: block; cursor: pointer;" onclick="window.open('${ticket.image_path}', '_blank')">`;
+        }
+
+        let html = '';
+        if (ticket.message) {
+            html += `
+                <div class="chat-bubble-wrapper user">
+                    <div class="chat-bubble">
+                        ${escapeHTML(ticket.message)}
+                        ${userImageHtml}
+                        <span class="chat-bubble-time">${ticket.date}</span>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        } else if (userImageHtml) {
+            html += `
+                <div class="chat-bubble-wrapper user">
+                    <div class="chat-bubble" style="padding: 0.5rem;">
+                        ${userImageHtml}
+                        <span class="chat-bubble-time">${ticket.date}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        let adminImageHtml = '';
+        if (ticket.admin_image_path) {
+            adminImageHtml = `<img src="${ticket.admin_image_path}" style="max-width: 100%; border-radius: 8px; margin-top: 0.5rem; display: block; cursor: pointer;" onclick="window.open('${ticket.admin_image_path}', '_blank')">`;
+        }
+
         if (ticket.admin_reply) {
             html += `
                 <div class="chat-bubble-wrapper support">
                     <div class="chat-bubble">
                         ${escapeHTML(ticket.admin_reply)}
+                        ${adminImageHtml}
+                        <span class="chat-bubble-time">${ticket.date}</span>
+                    </div>
+                </div>
+            `;
+        } else if (adminImageHtml) {
+            html += `
+                <div class="chat-bubble-wrapper support">
+                    <div class="chat-bubble" style="padding: 0.5rem;">
+                        ${adminImageHtml}
                         <span class="chat-bubble-time">${ticket.date}</span>
                     </div>
                 </div>
@@ -918,8 +997,6 @@ const ALL_INVESTMENT_PLANS = [
     { name: 'Black Panther Plan',   img: 'images/avengers_theme.png',   price: 100, roi: 2.5, duration: '24 Hours', category: 'movies' },
     { name: 'Popcorn Combo Deal',   img: 'images/movie_combo.png',      price: 100, roi: 2.5, duration: '24 Hours', category: 'products' },
     { name: 'Amazon Gift Card',     img: 'images/netflix_card.png',     price: 100, roi: 2.5, duration: '24 Hours', category: 'giftcards' },
-    { name: 'Guardians Ticket',     img: 'images/amc_theater.png',      price: 100, roi: 2.5, duration: '24 Hours', category: 'movies' },
-    { name: 'IMAX Experience',      img: 'images/avengers_theme.png',   price: 100, roi: 2.5, duration: '24 Hours', category: 'movies' },
     { name: 'Soda + Snack Pack',    img: 'images/movie_combo.png',      price: 100, roi: 2.5, duration: '24 Hours', category: 'products' },
     { name: 'Google Play Card',     img: 'images/netflix_card.png',     price: 100, roi: 2.5, duration: '24 Hours', category: 'giftcards' },
 ];
@@ -1019,7 +1096,18 @@ function renderDashboardPlansPage() {
 function handleDashboardBuyPlan(planName, price, qtyId) {
     const qtyEl = document.getElementById(qtyId);
     const qty = parseInt(qtyEl ? qtyEl.value : '1') || 1;
-    window.location.href = `/user-dashboard?tab=deposit&plan=${encodeURIComponent(planName)}&amount=${price * qty}`;
+    const totalCost = price * qty;
+
+    const balanceEl = document.getElementById('db-total-balance');
+    const balanceText = balanceEl ? balanceEl.textContent : '$0';
+    const currentBalance = parseFloat(balanceText.replace(/[^0-9.-]+/g, "")) || 0;
+
+    if (currentBalance < totalCost) {
+        showToast(`Low Balance! You need $${totalCost.toFixed(2)} but only have $${currentBalance.toFixed(2)}.`);
+        return;
+    }
+
+    purchasePlan(planName, qtyId);
 }
 
 // ============================================================
@@ -1246,4 +1334,84 @@ function renderSVGChart(currentBalance) {
 // ------------------------------------------------------------
 function startLiveTransactionsFeed() {
     // Removed simulated toast logic
+}
+
+// Change Email Flow (OTP)
+function openChangeEmailModal(e) {
+    if (e) e.preventDefault();
+    const profileDropdown = document.getElementById('profile-dropdown-menu');
+    if (profileDropdown) profileDropdown.classList.remove('show');
+
+    document.getElementById('change-email-modal').classList.add('active');
+    document.getElementById('change-email-step-1').style.display = 'block';
+    document.getElementById('change-email-step-2').style.display = 'none';
+    document.getElementById('ce-current-password').value = '';
+    document.getElementById('ce-new-email').value = '';
+    document.getElementById('ce-otp-code').value = '';
+}
+
+function closeChangeEmailModal() {
+    document.getElementById('change-email-modal').classList.remove('active');
+}
+
+async function sendChangeEmailOTP() {
+    const password = document.getElementById('ce-current-password').value;
+    const newEmail = document.getElementById('ce-new-email').value;
+
+    if (!password || !newEmail) {
+        showToast('Please enter password and new email');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('nova_token');
+        const response = await fetch('/api/user/change-email/send-otp', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ password, newEmail })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Failed to send OTP');
+
+        document.getElementById('change-email-step-1').style.display = 'none';
+        document.getElementById('change-email-step-2').style.display = 'block';
+        showToast('OTP sent to new email!');
+    } catch (err) {
+        showToast(err.message);
+    }
+}
+
+async function verifyChangeEmailOTP() {
+    const newEmail = document.getElementById('ce-new-email').value;
+    const otpCode = document.getElementById('ce-otp-code').value;
+
+    if (!otpCode) {
+        showToast('Please enter OTP');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('nova_token');
+        const response = await fetch('/api/user/change-email/verify', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ newEmail, otpCode })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Verification failed');
+
+        showToast('Email changed successfully!');
+        closeChangeEmailModal();
+        fetchAllDashboardData(); // Refresh UI
+    } catch (err) {
+        showToast(err.message);
+    }
 }
