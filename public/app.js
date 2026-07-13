@@ -271,13 +271,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // 4. Attach Logout click event
-    const logoutBtn = document.querySelector('.sidebar-item-link.logout');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
+    const logoutBtns = document.querySelectorAll('.sidebar-item-link.logout');
+    logoutBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
             e.preventDefault();
             logout();
         });
-    }
+    });
 
     // 5. Periodic polling to keep dashboard metrics, pending deposits, and compounding plan earnings synced in real-time
     setInterval(async () => {
@@ -326,13 +326,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         // Logout action button click
-        const logoutLink = profileDropdown.querySelector('.logout-action-btn');
-        if (logoutLink) {
-            logoutLink.addEventListener('click', (e) => {
+        const logoutLinks = profileDropdown.querySelectorAll('.logout-action-btn');
+        logoutLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
                 e.preventDefault();
                 logout();
             });
-        }
+        });
     }
 });
 
@@ -579,7 +579,6 @@ function renderDepositsTable(deposits) {
         return `
         <tr style="border-bottom: 1px solid #1e2538;">
             <td style="padding: 1rem 1.25rem; color: #cbd5e1; font-size: 0.85rem;">${dep.date || 'Today'}</td>
-            <td style="padding: 1rem 1.25rem; font-size: 0.85rem;">${planStr}</td>
             <td style="padding: 1rem 1.25rem; font-weight: 700; color: #f8fafc; font-size: 0.85rem;">${formattedAmount}</td>
             <td style="padding: 1rem 1.25rem; color: #cbd5e1; font-size: 0.85rem; font-family: monospace;">${dep.txn_id || 'TXN7f3e8d9c2a1b4f...'}</td>
             <td style="padding: 1rem 1.25rem;">
