@@ -1069,21 +1069,9 @@ function renderDashboardPlansPage() {
                             <div class="meta-item-label">Duration</div>
                             <div class="meta-item-value">${plan.duration}</div>
                         </div>
-                        <div>
-                            <div class="meta-item-label">Daily Earn</div>
-                            <div class="meta-item-value" style="color:#10b981;">+$${(plan.price * plan.roi / 100).toFixed(2)}</div>
-                        </div>
-                        <div>
-                            <div class="meta-item-label">Payout</div>
-                            <div class="meta-item-value">$${(plan.price + plan.price * plan.roi / 100).toFixed(2)}</div>
-                        </div>
                     </div>
                     <div style="display:flex; gap:0.5rem; margin-top:1rem; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:0.25rem; background:#0b0e14; border:1px solid #1e2538; border-radius:6px; padding:0.3rem 0.5rem; width:85px; flex-shrink:0;">
-                            <span style="font-size:0.7rem; color:#64748b; font-weight:600;">Qty:</span>
-                            <input type="number" id="db-qty-${start+i}" min="1" value="1" style="background:none; border:none; outline:none; color:#f1f5f9; font-weight:700; width:100%; text-align:center; font-size:0.85rem;">
-                        </div>
-                        <button onclick="handleDashboardBuyPlan('${plan.name.replace(/'/g,"\\'")}', ${plan.price}, 'db-qty-${start+i}')" style="background:#3b82f6; color:white; padding:0.5rem 1rem; border-radius:6px; font-size:0.8rem; font-weight:700; flex-grow:1; border:none; cursor:pointer;">Buy Plan</button>
+                        <button onclick="openBuyPlanModal('${plan.name.replace(/'/g,"\\'")}', ${plan.price})" style="background:#3b82f6; color:white; padding:0.6rem 1rem; border-radius:6px; font-size:0.85rem; font-weight:700; flex-grow:1; border:none; cursor:pointer; text-align:center;">Buy Now</button>
                     </div>
                 </div>
             </div>
@@ -1095,22 +1083,115 @@ function renderDashboardPlansPage() {
     if (nextBtn) nextBtn.disabled = dbCurrentPage >= totalPages;
 }
 
-function handleDashboardBuyPlan(planName, price, qtyId) {
-    const qtyEl = document.getElementById(qtyId);
-    const qty = parseInt(qtyEl ? qtyEl.value : '1') || 1;
-    const totalCost = price * qty;
+let currentBuyPlanName = '';
+let currentBuyPlanPrice = 0;
 
+function openBuyPlanModal(planName, price) {
+    currentBuyPlanName = planName;
+    currentBuyPlanPrice = parseFloat(price) || 0;
+
+    const modal = document.getElementById('buy-plan-modal');
+    const titleEl = document.getElementById('buy-modal-title');
+    const priceEl = document.getElementById('buy-modal-price-display');
+    const qtyInput = document.getElementById('buy-modal-qty-input');
+    const errorBox = document.getElementById('buy-modal-error-box');
+    const confirmBtn = document.getElementById('buy-modal-confirm-btn');
+
+    if (titleEl) titleEl.innerText = `Buy: ${planName}`;
+    if (priceEl) priceEl.innerText = `$${currentBuyPlanPrice.toFixed(2)}`;
+    if (qtyInput) qtyInput.value = '1';
+    if (errorBox) errorBox.style.display = 'none';
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+    }
+
+    updateBuyModalTotalCost();
+
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
+}
+
+function closeBuyPlanModal() {
+    const modal = document.getElementById('buy-plan-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+}
+
+function changeBuyModalQty(delta) {
+    const qtyInput = document.getElementById('buy-modal-qty-input');
+    if (!qtyInput) return;
+    let val = parseInt(qtyInput.value) || 1;
+    val = Math.max(1, val + delta);
+    qtyInput.value = val;
+    updateBuyModalTotalCost();
+}
+
+function updateBuyModalTotalCost() {
+    const qtyInput = document.getElementById('buy-modal-qty-input');
+    const totalEl = document.getElementById('buy-modal-total-display');
+    const errorBox = document.getElementById('buy-modal-error-box');
+    const confirmBtn = document.getElementById('buy-modal-confirm-btn');
+    if (!qtyInput || !totalEl) return;
+
+    let qty = parseInt(qtyInput.value) || 1;
+    if (qty < 1) {
+        qty = 1;
+        qtyInput.value = '1';
+    }
+
+    const totalCost = currentBuyPlanPrice * qty;
+    totalEl.innerText = `$${totalCost.toFixed(2)}`;
+
+    // Check balance
     const balanceEl = document.getElementById('db-total-balance');
     const balanceText = balanceEl ? balanceEl.textContent : '$0';
     const currentBalance = parseFloat(balanceText.replace(/[^0-9.-]+/g, "")) || 0;
 
     if (currentBalance < totalCost) {
-        showToast(`Low Balance! You need $${totalCost.toFixed(2)} but only have $${currentBalance.toFixed(2)}.`);
-        return;
+        if (errorBox) {
+            errorBox.innerHTML = `Insufficient balance in your account. Please deposit amount using <a href="javascript:void(0)" onclick="closeBuyPlanModal(); switchTab('deposit')" style="color:#60a5fa; text-decoration:underline; font-weight:700;">Deposit Link</a>.`;
+            errorBox.style.display = 'block';
+        }
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+        }
+    } else {
+        if (errorBox) errorBox.style.display = 'none';
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+        }
     }
-
-    purchasePlan(planName, qtyId);
 }
+
+async function confirmBuyPlan() {
+    const qtyInput = document.getElementById('buy-modal-qty-input');
+    if (!qtyInput) return;
+    const qty = parseInt(qtyInput.value) || 1;
+
+    try {
+        const response = await apiRequest('/investments', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: currentBuyPlanName,
+                quantity: qty
+            })
+        });
+
+        showToast(response.message || `Successfully purchased plan: ${currentBuyPlanName}!`);
+        closeBuyPlanModal();
+        await fetchAllDashboardData();
+    } catch (e) {
+        alert(e.message || 'Failed to purchase plan.');
+    }
+}
+
 
 // ============================================================
 // DUMMY INVESTMENTS FOR MY INVESTMENTS PAGE
